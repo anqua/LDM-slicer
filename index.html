@@ -4,15 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Clay Slicer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap">
 <style>
+/* Color tokens (black + green). The 3D scene reads scene-bg, bed, grid, grid2, vol, model. */
 :root{
-  --bg:#14110e; --panel:#1d1915; --panel2:#262019; --line:#3a3229; --text:#efe7dc;
-  --muted:#a2968a; --accent:#d9774b; --accent2:#f0a070; --warn:#e8b04a; --err:#e06a5a;
+  --font-ui:"Space Grotesk",system-ui,sans-serif;
+  --font-mono:"Space Mono",ui-monospace,Consolas,monospace;
+  --bg:#000000; --panel:#000000; --panel2:#0d0d0d; --line:#222222; --text:#ffffff;
+  --muted:#8c8c8c; --accent:#00ff00; --on-accent:#000000; --warn:#ffd400; --err:#ff3b3b;
+  --overlay:#000000;
+  --scene-bg:#000000; --bed:#050505; --grid:#141414; --grid2:#262626; --vol:#262626; --model:#d6d1c9;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
-  font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  font:14px/1.4 var(--font-ui)}
 button,select,input,textarea{font:inherit;color:inherit}
+input[type=number],textarea,.mono{font-family:var(--font-mono)}
 header{height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;
   border-bottom:1px solid var(--line);background:var(--panel)}
 .brand{font-weight:650;letter-spacing:.2px;display:flex;align-items:center;gap:8px;margin-right:8px}
@@ -21,8 +30,9 @@ header{height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;
 .btn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 12px;
   cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0f08;font-weight:600}
-.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn:disabled{cursor:not-allowed}
+.btn.primary:disabled{background:var(--bg);color:var(--accent)}   /* outline instead of fading */
 .app{display:grid;grid-template-columns:330px 1fr;height:calc(100% - 52px)}
 aside{overflow-y:auto;border-right:1px solid var(--line);background:var(--panel)}
 .tabs{display:flex;position:sticky;top:0;background:var(--panel);z-index:2;border-bottom:1px solid var(--line)}
@@ -42,7 +52,7 @@ h3{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted
   font-size:12px;pointer-events:none}
 .row .unit input{padding-right:34px}
 textarea{width:100%;min-height:110px;background:var(--panel2);border:1px solid var(--line);
-  border-radius:6px;padding:7px;font:12px/1.4 ui-monospace,Consolas,monospace;resize:vertical}
+  border-radius:6px;padding:7px;font:12px/1.4 var(--font-mono);resize:vertical}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .btns{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 .btns .btn{padding:5px 10px;font-size:13px}
@@ -53,18 +63,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 main{position:relative;overflow:hidden}
 #view{position:absolute;inset:0}
 .overlay{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.card{pointer-events:auto;background:rgba(29,25,21,.88);border:1px solid var(--line);border-radius:9px;
-  padding:9px 12px;font-size:13px;backdrop-filter:blur(4px)}
+.card{pointer-events:auto;background:var(--overlay);border:1px solid var(--line);border-radius:9px;
+  padding:9px 12px;font-size:13px}
 .viewbtns{position:absolute;right:14px;top:14px;display:flex;gap:6px}
-.viewbtns .btn{background:rgba(38,32,25,.9);font-size:13px;padding:5px 10px}
+.viewbtns .btn{background:var(--overlay);font-size:13px;padding:5px 10px}
 #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
-  background:rgba(217,119,75,.12);border:2px dashed var(--accent);font-size:18px;pointer-events:none}
+  background:var(--bg);border:2px dashed var(--accent);font-size:18px;pointer-events:none}
 #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
   color:var(--muted);text-align:center}
 @media (max-width:760px){
   .app{grid-template-columns:1fr;grid-template-rows:55% 45%}
   main{order:-1} aside{border-right:0;border-top:1px solid var(--line)}
-  header{padding:0 12px;gap:6px} .brand span{display:none}
+  header{padding:0 12px;gap:6px;overflow-x:auto;scrollbar-width:none} .brand span{display:none}
+  header .spacer{display:none}
+  .viewbtns{top:auto;bottom:14px}
 }
 </style>
 <script type="importmap">
@@ -100,6 +112,7 @@ main{position:relative;overflow:hidden}
     <div id="empty">Drop an STL file here<br>or use “Open STL” / “Demo vase”</div>
     <div class="overlay"><div class="card" id="status">No model loaded</div></div>
     <div class="viewbtns">
+      <button class="btn" id="proj" title="Toggle projection (O)">Perspective</button>
       <button class="btn" data-cam="iso">3D</button>
       <button class="btn" data-cam="top">Top</button>
       <button class="btn" data-cam="front">Front</button>
@@ -277,24 +290,61 @@ document.getElementById('resetP').onclick = () => {
   location.reload();
 };
 
+/* ---------------------------- Theme ---------------------------- */
+// All colors are CSS tokens in :root; the 3D scene reads scene-bg, bed, grid, grid2, vol, model from there.
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue('--' + n).trim();
+delete S.palette; delete S.font; save();   // drop keys left over from the temporary choosers
+
 /* ---------------------------- 3D scene ---------------------------- */
 const view = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 view.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x14110e);
-const camera = new THREE.PerspectiveCamera(40, 1, 1, 20000);
-camera.up.set(0, 0, 1);                       // printer convention: Z is up
+scene.background = new THREE.Color(cssVar('scene-bg'));
+// Two cameras share one OrbitControls; Z is up (printer convention).
+const perspCam = new THREE.PerspectiveCamera(40, 1, 1, 20000);
+const orthoCam = new THREE.OrthographicCamera(-1, 1, 1, -1, -50000, 50000);
+perspCam.up.set(0, 0, 1); orthoCam.up.set(0, 0, 1);
+let camera = perspCam;
+let orthoHalfH = 200;                          // ortho half-height in mm at zoom 1
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
+const tanHalfFov = () => Math.tan(THREE.MathUtils.degToRad(perspCam.fov / 2));
+
+function setOrthoFrustum() {
+  const a = view.clientWidth / Math.max(view.clientHeight, 1);
+  Object.assign(orthoCam, { left: -orthoHalfH * a, right: orthoHalfH * a, top: orthoHalfH, bottom: -orthoHalfH });
+  orthoCam.updateProjectionMatrix();
+}
+
+// Switch projection while keeping the apparent size at the orbit target.
+function setProjection(kind) {
+  const target = controls.target, dir = new THREE.Vector3();
+  if (kind === 'ortho' && camera !== orthoCam) {
+    const dist = perspCam.position.distanceTo(target);
+    orthoHalfH = dist * tanHalfFov();
+    orthoCam.position.copy(perspCam.position); orthoCam.quaternion.copy(perspCam.quaternion);
+    orthoCam.zoom = 1; setOrthoFrustum();
+    camera = orthoCam;
+  } else if (kind === 'persp' && camera !== perspCam) {
+    const halfH = orthoHalfH / orthoCam.zoom;
+    dir.subVectors(orthoCam.position, target).normalize();
+    perspCam.position.copy(target).addScaledVector(dir, halfH / tanHalfFov());
+    perspCam.quaternion.copy(orthoCam.quaternion);
+    camera = perspCam;
+  }
+  controls.object = camera; controls.update();
+  S.projection = kind; save();
+  document.getElementById('proj').textContent = kind === 'ortho' ? 'Orthographic' : 'Perspective';
+}
 
 scene.add(new THREE.HemisphereLight(0xfff4e6, 0x3a2c22, 1.1));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-300, -500, 800); scene.add(sun);
 const fill = new THREE.DirectionalLight(0xffd9c0, 0.5); fill.position.set(400, 300, 200); scene.add(fill);
 
 const bedGroup = new THREE.Group(); scene.add(bedGroup);
-const clayMat = new THREE.MeshStandardMaterial({ color: 0xc97a52, roughness: 0.85, metalness: 0, side: THREE.DoubleSide });
+const clayMat = new THREE.MeshStandardMaterial({ color: cssVar('model'), roughness: 0.85, metalness: 0, side: THREE.DoubleSide });
 const outMat  = new THREE.MeshStandardMaterial({ color: 0xe06a5a, roughness: 0.85, side: THREE.DoubleSide });
 let mesh = null;
 
@@ -308,9 +358,10 @@ function buildBed() {
   bedGroup.clear();
   const b = bedRect(), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
   const round = S.bedShape === 'round';
+  const plateMat = new THREE.MeshBasicMaterial({ color: cssVar('bed') });   // unlit: exact palette color
   const plate = round
-    ? new THREE.Mesh(new THREE.CircleGeometry(S.bedX / 2, 96), new THREE.MeshStandardMaterial({ color: 0x2a231c, roughness: 1 }))
-    : new THREE.Mesh(new THREE.PlaneGeometry(S.bedX, S.bedY), new THREE.MeshStandardMaterial({ color: 0x2a231c, roughness: 1 }));
+    ? new THREE.Mesh(new THREE.CircleGeometry(S.bedX / 2, 96), plateMat)
+    : new THREE.Mesh(new THREE.PlaneGeometry(S.bedX, S.bedY), plateMat);
   plate.position.set(cx, cy, -0.05); bedGroup.add(plate);
 
   // grid every 10 mm, bolder every 50 mm
@@ -330,14 +381,14 @@ function buildBed() {
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
     return new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color }));
   };
-  bedGroup.add(lines(minor, 0x3a3128), lines(major, 0x554636));
+  bedGroup.add(lines(minor, cssVar('grid')), lines(major, cssVar('grid2')));
 
   // build volume outline
   const vol = round
     ? new THREE.CylinderGeometry(S.bedX / 2, S.bedX / 2, S.bedZ, 64, 1, true).rotateX(Math.PI / 2)
     : new THREE.BoxGeometry(S.bedX, S.bedY, S.bedZ);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(vol, 30),
-    new THREE.LineBasicMaterial({ color: 0x4a3f33, transparent: true, opacity: 0.6 }));
+    new THREE.LineBasicMaterial({ color: cssVar('vol') }));
   edges.position.set(cx, cy, S.bedZ / 2); bedGroup.add(edges);
 
   // origin axes
@@ -410,9 +461,18 @@ function frame(kind) {
   if (kind === 'top') camera.position.set(cx, cy - 0.001, tz + d);
   else if (kind === 'front') camera.position.set(cx, cy - d, tz);
   else camera.position.set(cx + d * 0.55, cy - d * 0.8, tz + d * 0.55);
+  if (camera === orthoCam) {                   // match framing of the perspective view
+    orthoHalfH = camera.position.distanceTo(controls.target) * tanHalfFov();
+    orthoCam.zoom = 1; setOrthoFrustum();
+  }
   controls.update();
 }
 document.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => frame(b.dataset.cam));
+document.getElementById('proj').onclick = () => setProjection(camera === orthoCam ? 'persp' : 'ortho');
+addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'o' && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))
+    setProjection(camera === orthoCam ? 'persp' : 'ortho');
+});
 
 document.querySelectorAll('[data-rot]').forEach(b => b.onclick = () => {
   if (!baseGeom) return;
@@ -477,10 +537,13 @@ document.getElementById('demo').onclick = demoVase;
 function resize() {
   const w = view.clientWidth, h = view.clientHeight;
   renderer.setSize(w, h, false); renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%';
-  camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix();
+  perspCam.aspect = w / Math.max(h, 1); perspCam.updateProjectionMatrix();
+  setOrthoFrustum();
 }
 new ResizeObserver(resize).observe(view);
 buildBed(); resize(); frame('iso');
+if (S.projection === 'ortho') setProjection('ortho');
+if (new URLSearchParams(location.search).has('demo')) demoVase();
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
 </script>
 </body>
