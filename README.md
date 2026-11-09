@@ -2,6 +2,8 @@
 
 A browser-based slicer for clay / paste 3D printers. No install, no build step: it's one HTML file that uses three.js from a CDN.
 
+**Live:** https://anqua.github.io/clay-slicer/
+
 ## Status
 
 Being built step by step.
