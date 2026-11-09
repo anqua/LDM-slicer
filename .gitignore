@@ -1,0 +1,4 @@
+.claude/
+*.gcode
+.DS_Store
+Thumbs.db
