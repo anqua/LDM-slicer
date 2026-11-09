@@ -1,6 +1,6 @@
-# Clay Slicer
+# Liquid Deposition Modeling (LDM) Slicer
 
-A browser-based slicer for clay / paste 3D printers. No install, no build step: it's one HTML file that uses three.js from a CDN.
+A browser-based slicer for Liquid Deposition 3D printers. No install, no build step: it's one HTML file that uses three.js from a CDN.
 
 **Live:** https://anqua.github.io/clay-slicer/
 
