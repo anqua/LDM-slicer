@@ -1,6 +1,6 @@
 # Liquid Deposition Modeling (LDM) Slicer
 
-A browser-based slicer for Liquid Deposition 3D printers. No install, no build step: it's one HTML file that uses three.js from a CDN.
+A browser-based slicer for Liquid Deposition 3D printers. No install, no build step: plain HTML, CSS and native ES modules, with three.js from a CDN.
 
 **Live:** https://anqua.github.io/clay-slicer/
 
@@ -19,6 +19,38 @@ Open `index.html` through a local web server. ES modules don't load from `file:/
 
 - On Windows with no other tools installed: `powershell -ExecutionPolicy Bypass -File serve.ps1`, then open http://localhost:8765
 - Any other static server also works, e.g. `npx serve` or `python -m http.server`
+
+## Project structure
+
+```
+index.html              markup, importmap, loads css/* and src/main.js
+css/
+  theme.css             design tokens (colors, fonts); the 3D scene reads these too
+  layout.css            page structure and responsive rules
+  components.css        buttons, tabs, form rows, cards
+src/
+  main.js               entry point: creates modules and wires them together
+  core/
+    schema.js           settings definition (drives forms and defaults)
+    settings.js         settings store: localStorage, update(patch), onChange()
+    theme.js            cssVar() to read tokens from CSS
+  viewer/
+    viewer.js           renderer, scene, lights, render loop, resize
+    camera-rig.js       perspective/orthographic cameras + OrbitControls, framing
+    bed.js              build plate, grid, build-volume outline, bed extents
+  model/
+    model.js            loaded model: rotation, scale/offset placement, fit check
+    loader.js           STL reading
+    demo.js             procedural demo vase
+  ui/
+    form.js             renders schema fields, two-way bound to settings
+    panels.js           sidebar tabs and the Model / Printer / Print paths panes
+    status.js           model summary (status card and Model pane)
+    view-controls.js    3D/Top/Front buttons, projection toggle, keyboard shortcuts
+    file-input.js       Open STL button and drag-and-drop
+```
+
+Data flow: UI calls `update({...})` in `core/settings.js`. `main.js` listens with `onChange` and rebuilds the bed and model, then refreshes the status. Modules don't share globals; they're passed what they need.
 
 ## Settings
 

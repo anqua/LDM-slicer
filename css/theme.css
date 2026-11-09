@@ -1,0 +1,14 @@
+/* Design tokens. The 3D scene reads --scene-bg, --bed, --grid, --grid2, --vol, --model via core/theme.js. */
+:root{
+  --font-ui:"Space Grotesk",system-ui,sans-serif;
+  --font-mono:"Space Mono",ui-monospace,Consolas,monospace;
+
+  --bg:#000000; --panel:#000000; --panel2:#0d0d0d; --line:#222222;
+  --text:#ffffff; --muted:#8c8c8c;
+  --accent:#00ff00; --on-accent:#000000;
+  --warn:#ffd400; --err:#ff3b3b;
+  --overlay:#000000;
+
+  --scene-bg:#000000; --bed:#050505; --grid:#141414; --grid2:#262626; --vol:#262626;
+  --model:#d6d1c9; --model-out:#ff3b3b;
+}

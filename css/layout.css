@@ -1,0 +1,31 @@
+/* Page structure: header, sidebar, viewport, overlays, responsive rules. */
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.4 var(--font-ui)}
+button,select,input,textarea{font:inherit;color:inherit}
+input[type=number],textarea,.mono{font-family:var(--font-mono)}
+
+header{height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;
+  border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{font-weight:650;letter-spacing:.2px;display:flex;align-items:center;gap:8px;margin-right:8px}
+.brand i{width:14px;height:14px;border-radius:50%;background:var(--accent);display:inline-block}
+.spacer{flex:1}
+
+.app{display:grid;grid-template-columns:330px 1fr;height:calc(100% - 52px)}
+aside{overflow-y:auto;border-right:1px solid var(--line);background:var(--panel)}
+main{position:relative;overflow:hidden}
+#view{position:absolute;inset:0}
+
+.overlay{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.viewbtns{position:absolute;right:14px;top:14px;display:flex;gap:6px}
+#drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  background:var(--bg);border:2px dashed var(--accent);font-size:18px;pointer-events:none}
+#empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
+  color:var(--muted);text-align:center}
+
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:55% 45%}
+  main{order:-1} aside{border-right:0;border-top:1px solid var(--line)}
+  header{padding:0 12px;gap:6px;overflow-x:auto;scrollbar-width:none} .brand span{display:none}
+  header .spacer{display:none}
+  .viewbtns{top:auto;bottom:14px}
+}

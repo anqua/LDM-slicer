@@ -1,0 +1,39 @@
+/* Reusable UI pieces: buttons, tabs, form rows, info boxes, floating cards. */
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:6px 12px;
+  cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn:disabled{cursor:not-allowed}
+.btn.primary:disabled{background:var(--bg);color:var(--accent)}   /* outline instead of fading */
+.btns{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.btns .btn{padding:5px 10px;font-size:13px}
+
+.tabs{display:flex;position:sticky;top:0;background:var(--panel);z-index:2;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;background:none;border:0;padding:11px 4px;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent}
+.tabs button.on{color:var(--text);border-bottom-color:var(--accent)}
+.pane{display:none;padding:6px 14px 24px}
+.pane.on{display:block}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:18px 0 8px}
+
+.row{display:grid;grid-template-columns:1fr 112px;align-items:center;gap:8px;margin:6px 0}
+.row label{color:var(--text)}
+.row small{grid-column:1/-1;color:var(--muted);margin-top:-4px;font-size:12px}
+.row input,.row select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px}
+.row .unit{position:relative}
+.row .unit span{position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--muted);
+  font-size:12px;pointer-events:none}
+.row .unit input{padding-right:34px}
+.field-area{margin:8px 0}
+textarea{width:100%;min-height:110px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:6px;padding:7px;font:12px/1.4 var(--font-mono);resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+
+.info{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  font-size:13px;color:var(--muted)}
+.info b{color:var(--text);font-weight:600}
+.warn{color:var(--warn)} .err{color:var(--err)}
+
+.card{pointer-events:auto;background:var(--overlay);border:1px solid var(--line);border-radius:9px;
+  padding:9px 12px;font-size:13px}
+.viewbtns .btn{background:var(--overlay);font-size:13px;padding:5px 10px}
