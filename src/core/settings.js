@@ -1,15 +1,39 @@
 // Settings store: one plain object `S`, persisted to localStorage, with change notifications.
 // All writes that should reach the UI/scene go through update(patch).
 import { SCHEMA } from './schema.js';
+import { PRINTERS, DEFAULT_PRINTER } from './printers.js';
 
 // Key kept from the first version so existing saved settings survive renames.
 export const STORE_KEY = 'claySlicer.settings.v1';
 
+// Defaults: schema values, overridden by the default printer preset.
 const defaults = {};
 for (const group of Object.values(SCHEMA)) for (const f of group) if (f.k) defaults[f.k] = f.def;
+Object.assign(defaults, PRINTERS[DEFAULT_PRINTER].values, { printerPreset: DEFAULT_PRINTER });
+
+// Printer defaults before the WASP preset existed. A saved state with no `printerPreset` key
+// whose printer values all still equal these was never customized: move it to the new default.
+const LEGACY_PRINTER = {
+  printerName: 'My clay printer', bedX: 300, bedY: 300, bedZ: 400, origin: 'corner', bedShape: 'rect',
+  nozzle: 3, extruderType: 'piston', reservoir: 1000, maxSpeed: 60, travelSpeed: 80, flavor: 'marlin',
+};
+const LEGACY_PATHS = { layerH: 1.8, lineW: 3.6 };
+
+function migrate(saved) {
+  if ('printerPreset' in saved) return saved;
+  const untouched = obj => Object.entries(obj).every(([k, v]) => !(k in saved) || saved[k] === v);
+  const out = { ...saved };
+  if (untouched(LEGACY_PRINTER)) {
+    for (const k of Object.keys(LEGACY_PRINTER)) delete out[k];
+    if (untouched(LEGACY_PATHS)) for (const k of Object.keys(LEGACY_PATHS)) delete out[k];
+  } else {
+    out.printerPreset = '';            // customized machine: keep it, shown as "Custom"
+  }
+  return out;
+}
 
 export const S = { ...defaults };
-try { Object.assign(S, JSON.parse(localStorage.getItem(STORE_KEY) || '{}')); } catch { /* storage unavailable */ }
+try { Object.assign(S, migrate(JSON.parse(localStorage.getItem(STORE_KEY) || '{}'))); } catch { /* storage unavailable */ }
 delete S.palette; delete S.font;   // keys left over from removed UI experiments
 
 const listeners = new Set();

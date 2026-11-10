@@ -1,4 +1,5 @@
 // Settings definition. Drives the sidebar forms and supplies defaults.
+// Printer `def` values are generic fallbacks; the default preset (core/printers.js) overrides them.
 // Field: { k, label, def, type?: 'num'|'select'|'text'|'area', unit?, step?, opts?, help? }
 // Heading: { h }
 export const SCHEMA = {
@@ -36,9 +37,9 @@ export const SCHEMA = {
   ],
   paths: [
     { h: 'Layers' },
-    { k: 'layerH', label: 'Layer height', unit: 'mm', def: 1.8, step: 0.1,
+    { k: 'layerH', label: 'Layer height', unit: 'mm', def: 0.7, step: 0.1,     // ≈60 % of the 1.2 mm WASP nozzle
       help: 'Typically 50–70 % of nozzle diameter for clay.' },
-    { k: 'lineW', label: 'Line width', unit: 'mm', def: 3.6, step: 0.1,
+    { k: 'lineW', label: 'Line width', unit: 'mm', def: 1.4, step: 0.1,        // ≈120 % of the 1.2 mm WASP nozzle
       help: 'Typically 110–130 % of nozzle diameter.' },
     { k: 'mode', label: 'Path mode', type: 'select', def: 'spiral',
       opts: [['spiral', 'Spiral vase (continuous)'], ['layered', 'Layer by layer']] },

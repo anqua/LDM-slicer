@@ -1,6 +1,9 @@
 // Printer presets. `values` are settings applied when the preset is chosen;
 // `frame` sizes the schematic printer model in viewer/printer-model.js.
-import { S } from './settings.js';
+// No imports from settings.js: settings.js uses this file for its defaults.
+
+/** Preset used for first-time visitors and "Reset to defaults". */
+export const DEFAULT_PRINTER = 'wasp2040';
 
 export const PRINTERS = {
   // Sources (retailer / lab listings; no WASP datasheet found):
@@ -26,7 +29,7 @@ export const PRINTERS = {
 };
 
 /** Keys whose current value differs from the preset. */
-export function presetDiff(id, s = S) {
+export function presetDiff(id, s) {
   const p = PRINTERS[id];
   if (!p) return [];
   return Object.entries(p.values).filter(([k, v]) => s[k] !== v).map(([k]) => k);

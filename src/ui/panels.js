@@ -16,7 +16,7 @@ function initPresetPicker() {
     const id = PRINTERS[S.printerPreset] ? S.printerPreset : '';
     sel.value = id;
     if (!id) { info.textContent = 'Enter your printer\'s specifications below, or pick a preset.'; return; }
-    const p = PRINTERS[id], diff = presetDiff(id);
+    const p = PRINTERS[id], diff = presetDiff(id, S);
     info.innerHTML = `<b>${p.name}</b><br>${p.notes}`
       + (diff.length ? `<br><span class="warn">Changed from preset: ${diff.map(k => LABELS[k] ?? k).join(', ')}</span>` : '');
   };
