@@ -25,10 +25,11 @@
   <button class="btn" id="demo">Demo vase</button>
   <div class="spacer"></div>
   <button class="btn primary" id="slice" disabled title="Coming in step 2">Slice</button>
+  <!-- Lockup matches the @A website footer: logo + "@A | Art / Technology / Architecture", Space Grotesk 500 -->
   <a class="lab" href="https://anqua.github.io/at-a/" target="_blank" rel="noopener"
-     title="A project of @A — Art, Technology, Architecture research group">
-    <img src="assets/logo-ata-192.png" alt="@A logo" width="40" height="40">
-    <span>Art · Technology ·<br>Architecture</span>
+     title="@A | Art, Technology, Architecture">
+    <img src="assets/logo-ata-192.png" alt="@A logo" width="56" height="56">
+    <span>@A | Art<br>Technology<br>Architecture</span>
   </a>
 </header>
 
@@ -49,7 +50,8 @@
     <div id="empty">Drop an STL file here<br>or use “Open STL” / “Demo vase”</div>
     <div class="overlay"><div class="card" id="status">No model loaded</div></div>
     <div class="viewbtns">
-      <button class="btn" id="printerBtn" title="Show printer (P)">Printer</button>
+      <button class="btn toggle" id="printerBtn" role="switch" aria-checked="false"
+              title="Show or hide the printer (P)"><span class="switch" aria-hidden="true"></span>Printer</button>
       <button class="btn" id="proj" title="Toggle projection (O)">Perspective</button>
       <button class="btn" data-cam="iso">3D</button>
       <button class="btn" data-cam="top">Top</button>

@@ -4,19 +4,21 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/
 button,select,input,textarea{font:inherit;color:inherit}
 input[type=number],textarea,.mono{font-family:var(--font-mono)}
 
-header{height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;
+:root{--header-h:64px}
+header{height:var(--header-h);display:flex;align-items:center;gap:10px;padding:0 16px;
   border-bottom:1px solid var(--line);background:var(--panel)}
 .brand{font-weight:650;letter-spacing:.2px;display:flex;align-items:center;gap:8px;margin-right:8px}
 .brand i{width:14px;height:14px;border-radius:50%;background:var(--accent);display:inline-block}
 .spacer{flex:1}
 
-/* Lab attribution (@A), right end of the header */
-.lab{display:flex;align-items:center;gap:8px;margin-left:6px;padding-left:14px;border-left:1px solid var(--line);
-  color:var(--muted);text-decoration:none;font-size:11px;line-height:1.2;letter-spacing:.6px;text-transform:uppercase}
-.lab img{width:40px;height:40px;display:block}
-.lab:hover{color:var(--text)}
+/* Lab attribution (@A), right end of the header. Same lockup and type as the @A website footer
+   (.footer-group-name: Space Grotesk 500, line-height 1.3, white, left-aligned). */
+.lab{display:flex;align-items:center;gap:10px;margin-left:6px;padding-left:14px;border-left:1px solid var(--line);
+  color:#fff;text-decoration:none;font-family:"Space Grotesk",system-ui,sans-serif;font-weight:500;
+  font-size:13px;line-height:1.3;text-align:left}
+.lab img{width:56px;height:56px;display:block}
 
-.app{display:grid;grid-template-columns:330px 1fr;height:calc(100% - 52px)}
+.app{display:grid;grid-template-columns:330px 1fr;height:calc(100% - var(--header-h))}
 aside{overflow-y:auto;border-right:1px solid var(--line);background:var(--panel)}
 main{position:relative;overflow:hidden}
 #view{position:absolute;inset:0}
@@ -35,5 +37,6 @@ main{position:relative;overflow:hidden}
   header .spacer{display:none}
   .lab span{display:none}
   .lab{padding-left:8px;flex-shrink:0}
+  .lab img{width:44px;height:44px}
   .viewbtns{top:auto;bottom:14px}
 }

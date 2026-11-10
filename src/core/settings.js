@@ -10,6 +10,8 @@ export const STORE_KEY = 'claySlicer.settings.v1';
 const defaults = {};
 for (const group of Object.values(SCHEMA)) for (const f of group) if (f.k) defaults[f.k] = f.def;
 Object.assign(defaults, PRINTERS[DEFAULT_PRINTER].values, { printerPreset: DEFAULT_PRINTER });
+// View preferences. `printerVisible` replaces `showPrinter`, which was force-saved as false on every load.
+Object.assign(defaults, { printerVisible: true });
 
 // Printer defaults before the WASP preset existed. A saved state with no `printerPreset` key
 // whose printer values all still equal these was never customized: move it to the new default.
@@ -34,7 +36,7 @@ function migrate(saved) {
 
 export const S = { ...defaults };
 try { Object.assign(S, migrate(JSON.parse(localStorage.getItem(STORE_KEY) || '{}'))); } catch { /* storage unavailable */ }
-delete S.palette; delete S.font;   // keys left over from removed UI experiments
+delete S.palette; delete S.font; delete S.showPrinter;   // obsolete keys
 
 const listeners = new Set();
 

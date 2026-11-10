@@ -29,10 +29,11 @@ function frameView(view = 'iso') {
 }
 
 const printerBtn = document.getElementById('printerBtn');
-function setPrinterVisible(v) {
+function setPrinterVisible(v, persist = true) {
   printer.setVisible(v);
   printerBtn.classList.toggle('on', v);
-  S.showPrinter = v; save();
+  printerBtn.setAttribute('aria-checked', String(v));
+  if (persist) { S.printerVisible = v; save(); }
 }
 function togglePrinter() {
   setPrinterVisible(!printer.visible);
@@ -95,7 +96,7 @@ rig.onProjectionChange(kind => { S.projection = kind; save(); });
 // Initial state.
 bed.rebuild();
 printer.rebuild();
-setPrinterVisible(!!S.showPrinter);
+setPrinterVisible(S.printerVisible !== false, false);   // shown by default; only a click is saved
 frameView('iso');
 if (S.projection === 'ortho') rig.setProjection('ortho');
 if (new URLSearchParams(location.search).has('demo')) openModel(demoVaseGeometry(), 'demo-vase.stl');
