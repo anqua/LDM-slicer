@@ -9,6 +9,7 @@
   --warn:#ffd400; --err:#ff3b3b;
   --overlay:#000000;
 
-  --scene-bg:#000000; --bed:#050505; --grid:#141414; --grid2:#262626; --vol:#262626;
+  --scene-bg:#000000; --bed:#050505; --grid:#2a2a2a; --grid2:#454545; --vol:#454545;
   --model:#d6d1c9; --model-out:#ff3b3b;
+  --printer:#5a5a5a; --printer-dark:#1f1f1f;   /* schematic printer frame */
 }
