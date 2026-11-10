@@ -10,6 +10,12 @@ header{height:52px;display:flex;align-items:center;gap:10px;padding:0 16px;
 .brand i{width:14px;height:14px;border-radius:50%;background:var(--accent);display:inline-block}
 .spacer{flex:1}
 
+/* Lab attribution (@A), right end of the header */
+.lab{display:flex;align-items:center;gap:8px;margin-left:6px;padding-left:14px;border-left:1px solid var(--line);
+  color:var(--muted);text-decoration:none;font-size:11px;line-height:1.2;letter-spacing:.6px;text-transform:uppercase}
+.lab img{width:40px;height:40px;display:block}
+.lab:hover{color:var(--text)}
+
 .app{display:grid;grid-template-columns:330px 1fr;height:calc(100% - 52px)}
 aside{overflow-y:auto;border-right:1px solid var(--line);background:var(--panel)}
 main{position:relative;overflow:hidden}
@@ -27,5 +33,7 @@ main{position:relative;overflow:hidden}
   main{order:-1} aside{border-right:0;border-top:1px solid var(--line)}
   header{padding:0 12px;gap:6px;overflow-x:auto;scrollbar-width:none} .brand span{display:none}
   header .spacer{display:none}
+  .lab span{display:none}
+  .lab{padding-left:8px;flex-shrink:0}
   .viewbtns{top:auto;bottom:14px}
 }

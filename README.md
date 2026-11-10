@@ -4,6 +4,8 @@ A browser-based slicer for Liquid Deposition 3D printers. No install, no build s
 
 **Live:** https://anqua.github.io/clay-slicer/
 
+A project of [@A – Art, Technology, Architecture](https://anqua.github.io/at-a/) research group.
+
 ## Status
 
 Being built step by step.
