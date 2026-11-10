@@ -24,7 +24,7 @@ export const PRINTERS = {
       flavor: 'marlin',
     },
     // Machine 490 × 440 × 870 mm. `below`: frame base below the bed surface (estimate).
-    frame: { kind: 'delta', footprint: 490, height: 870, below: 120, tankLiters: 3 },
+    frame: { kind: 'delta', footprint: 490, height: 870, below: 120 },
   },
 };
 

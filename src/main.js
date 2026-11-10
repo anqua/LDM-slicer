@@ -24,7 +24,7 @@ function frameView(view = 'iso') {
   const bb = model.bounds();
   if (bb) { tz = bb.max.z / 2; r = Math.max(r, bb.max.z * 0.9); }
   const ext = printer.extent();
-  if (ext) { tz = (ext.zMin + ext.zMax) / 2; r = Math.max(r, (ext.zMax - ext.zMin) * 0.55, ext.r); }
+  if (ext) { tz = (ext.zMin + ext.zMax) / 2; r = Math.max(r, (ext.zMax - ext.zMin) * 0.8, ext.r * 1.3); }
   rig.frame(view, { cx, cy, tz, r });
 }
 
@@ -61,7 +61,7 @@ async function openFile(file) {
 onChange(keys => {
   const bedChanged = keys.some(k => BED_KEYS.has(k));
   if (bedChanged) bed.rebuild();
-  if (bedChanged || keys.includes('printerPreset') || keys.includes('reservoir')) printer.rebuild();
+  if (bedChanged || keys.includes('printerPreset')) printer.rebuild();
   if (bedChanged || keys.some(k => TRANSFORM_KEYS.has(k))) model.rebuild();
   renderModelStatus(model.info());
 });
