@@ -15,7 +15,9 @@ Being built step by step.
 - [x] **Step 3 – Toolpath preview:** paths colored by type, a layer slider (arrow keys step through layers), optional travel moves and model overlay. **Play** (or Space) simulates the print at 10×, 20× or 30× speed: the paths grow move by move and the printer head follows the nozzle. On the delta printer, the carriages and arms move with it.
 - [x] **Step 4 – G-code export:** E values, speeds, min layer time, start and end G-code, plus clay-specific start and end handling modeled on [Termite](https://www.food4rhino.com/en/app/termite): first layer height, pre-fill, safe start and safe end.
 
-Not yet: top surfaces and sparse infill (layered mode prints walls and a solid bottom only), and acceleration in the time estimate.
+- [x] **Infill** (layer-by-layer mode): zig-zag between the walls and an extra inner wall, lines, grid, gyroid and Schwarz D (diamond), with adjustable spacing / cell size.
+
+Not yet: top surfaces, and acceleration in the time estimate.
 
 ## Run it
 
@@ -50,7 +52,8 @@ src/
   slicer/
     slice.js            mesh -> layer heights and closed contours (outer CCW, holes CW)
     polygon.js          2D helpers: area, offset, simplify, convex hull
-    paths.js            contours -> toolpaths: priming loops, walls, bottom fill, spiral
+    paths.js            contours -> toolpaths: priming loops, walls, bottom fill, infill, spiral
+    infill.js           fill patterns: scanlines, zig-zag, gyroid / Schwarz D (marching squares)
     gcode.js            toolpaths -> G-code, with pre-fill, safe start and safe end
   ui/
     slice-panel.js      Slice / Export buttons, layer slider, slice summary
@@ -66,7 +69,7 @@ Data flow: UI calls `update({...})` in `core/settings.js`. `main.js` listens wit
 ## Settings
 
 - **Printer:** built for the Delta WASP 2040 Clay only: round bed with the origin at its center. Settings: bed diameter and height, nozzle, extruder type, how E is interpreted (virtual filament or volume), firmware, start and end G-code.
-- **Print paths:** layer height, line width, spiral or layered mode, walls, bottom layers, seam, flow, retraction, speeds.
+- **Print paths:** layer height, line width, spiral or layered mode, walls, bottom layers, fill angle, infill pattern / spacing / zig-zag width, seam, flow, retraction, speeds.
 - **Start of print / end of paths** (after Termite by Julian Jauk, TU Graz):
   - *Priming loops* around the part before it starts, and their distance.
   - *First layer height*, separate from the other layers.

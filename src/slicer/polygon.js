@@ -48,6 +48,9 @@ export function simplify(poly, tol) {
   return [...a.slice(0, -1), ...b.slice(0, -1)];
 }
 
+/** Douglas–Peucker on an open polyline. */
+export const simplifyLine = (pts, tol) => dp(pts, tol);
+
 function dp(pts, tol) {
   if (pts.length < 3) return pts;
   const [ax, ay] = pts[0], [bx, by] = pts.at(-1);

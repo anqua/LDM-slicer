@@ -13,5 +13,5 @@
   --model:#d6d1c9; --model-out:#ff3b3b;
   --printer:#5a5a5a; --printer-dark:#1f1f1f;   /* schematic printer frame */
   /* Toolpath preview (viewer/toolpath.js); the current layer uses --accent. */
-  --path-outer:#d6d1c9; --path-inner:#9c8f80; --path-bottom:#c2703d; --path-skirt:#4da3ff; --path-travel:#3a3a3a;
+  --path-outer:#d6d1c9; --path-inner:#9c8f80; --path-bottom:#c2703d; --path-infill:#d9a441; --path-skirt:#4da3ff; --path-travel:#3a3a3a;
 }

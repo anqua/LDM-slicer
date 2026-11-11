@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { cssVar } from '../core/theme.js';
 
-const TYPE_TOKEN = { skirt: 'path-skirt', outer: 'path-outer', inner: 'path-inner', bottom: 'path-bottom', spiral: 'path-outer' };
+const TYPE_TOKEN = { skirt: 'path-skirt', outer: 'path-outer', inner: 'path-inner', bottom: 'path-bottom', infill: 'path-infill', spiral: 'path-outer' };
 
 export function createToolpathView(scene) {
   const group = new THREE.Group();
