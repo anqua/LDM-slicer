@@ -11,16 +11,113 @@ import { initPanels } from './ui/panels.js';
 import { renderModelStatus } from './ui/status.js';
 import { initViewControls } from './ui/view-controls.js';
 import { initFileInput } from './ui/file-input.js';
+import { initSlicePanel } from './ui/slice-panel.js';
+import { createToolpathView } from './viewer/toolpath.js';
+import { layerHeights, sliceMesh } from './slicer/slice.js';
+import { buildToolpaths } from './slicer/paths.js';
+import { toGcode } from './slicer/gcode.js';
 
-const { scene, rig } = createViewer(document.getElementById('view'));
+const { scene, rig, onFrame } = createViewer(document.getElementById('view'));
 const bed = createBed(scene);
 const model = createModel(scene);
 const printer = createPrinterModel(scene);
+const toolpath = createToolpathView(scene);
+
+// ---- Slicing --------------------------------------------------------------
+let result = null;                     // { tp, gcode } of the current slice
+
+const panel = initSlicePanel({
+  slice: runSlice,
+  exportGcode() {
+    if (!result) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([result.gcode.text], { type: 'text/plain' }));
+    a.download = (model.name() || 'model').replace(/\.stl$/i, '').replace(/[^\w-]+/g, '_') + '.gcode';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  },
+  setShowModel: v => model.setVisible(v),
+  setShowTravel: v => toolpath.setShowTravel(v),
+  scrubLayer(n) { setPlaying(false); showSim(toolpath.layerEnd(n)); },
+  togglePlay() {
+    if (!toolpath.active) return;
+    if (!sim.playing && sim.t >= toolpath.duration - 1e-6) sim.t = 0;   // finished: start over
+    setPlaying(!sim.playing);
+  },
+  setSpeed(x) { sim.speed = x; },
+});
+
+// ---- Print simulation -----------------------------------------------------
+// The paths grow along the print's time line; the printer head follows the nozzle.
+const sim = { playing: false, t: 0, speed: panel.speed };
+
+function showSim(t) {
+  sim.t = t;
+  const r = toolpath.simulate(t);
+  if (!r) return;
+  if (t >= toolpath.duration) printer.park(); else printer.setHead(...r.pos);
+  panel.progress(r.t, r.layer);
+}
+
+function setPlaying(v) {
+  sim.playing = v;
+  panel.setPlaying(v);
+  if (v && !printer.visible) setPrinterVisible(true, false);   // show the machine at work (not saved)
+}
+
+onFrame(dt => {
+  if (!sim.playing) return;
+  const t = sim.t + dt * sim.speed;
+  if (t >= toolpath.duration) setPlaying(false);
+  showSim(Math.min(t, toolpath.duration));
+});
+
+function runSlice() {
+  const pos = model.positions();
+  if (!pos) return;
+  if (!model.fits() && !confirm('The model is outside the build volume. Slice anyway?')) return;
+  panel.busy(true);
+  setTimeout(() => {                   // let the button repaint before the (synchronous) work
+    try {
+      const top = model.bounds().max.z;
+      const sliced = sliceMesh(pos, layerHeights(top, S.firstLayerH || S.layerH, S.layerH), Math.max(0.02, S.lineW * 0.03));
+      const tp = buildToolpaths(sliced, S);
+      const gcode = toGcode(tp, S, { modelName: model.name() });
+      result = { tp, gcode };
+      setPlaying(false);
+      toolpath.set(tp, S);
+      model.setVisible(false);
+      panel.show(tp, gcode.stats, S, toolpath.duration);
+      showSim(toolpath.duration);
+    } catch (e) {
+      console.error(e);
+      alert('Slicing failed: ' + e.message);
+    } finally {
+      panel.busy(false);
+    }
+  }, 30);
+}
+
+/** Forget the slice (model or settings changed). */
+function invalidate(message) {
+  if (!result && !toolpath.active) return;
+  result = null;
+  setPlaying(false);
+  sim.t = 0;
+  printer.park();
+  toolpath.clear();
+  model.setVisible(true);
+  panel.reset(message);
+}
+
+addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && model.loaded) runSlice();
+});
 
 /** Frame the bed, or the model if one is loaded, or the whole printer when it is shown. */
 function frameView(view = 'iso') {
   const { cx, cy } = bedCenter();
-  let tz = 0, r = Math.max(S.bedX, S.bedY) * 0.6;
+  let tz = 0, r = S.bedX * 0.6;
   const bb = model.bounds();
   if (bb) { tz = bb.max.z / 2; r = Math.max(r, bb.max.z * 0.9); }
   const ext = printer.extent();
@@ -45,7 +142,9 @@ addEventListener('keydown', e => {
 });
 
 function openModel(geometry, name) {
+  invalidate();
   model.load(geometry, name);
+  panel.setCanSlice(true);
   document.getElementById('empty').style.display = 'none';
   update({ offX: 0, offY: 0 });      // triggers rebuild + status via onChange
   frameView('iso');
@@ -64,6 +163,7 @@ onChange(keys => {
   if (bedChanged || keys.includes('printerPreset')) printer.rebuild();
   if (bedChanged || keys.some(k => TRANSFORM_KEYS.has(k))) model.rebuild();
   renderModelStatus(model.info());
+  invalidate('Settings changed — slice again.');
 });
 
 initPanels({
@@ -71,11 +171,13 @@ initPanels({
     if (!model.loaded) return;
     model.rotate(axis);
     model.rebuild();
+    invalidate('Model rotated — slice again.');
     renderModelStatus(model.info());
     frameView('iso');
   },
   resetTransform() {
     model.resetRotation();
+    model.rebuild();
     update({ scale: 100, offX: 0, offY: 0 });
     frameView('iso');
   },

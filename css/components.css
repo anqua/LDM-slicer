@@ -43,7 +43,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .info{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
   font-size:13px;color:var(--muted)}
 .info b{color:var(--text);font-weight:600}
-.warn{color:var(--warn)} .err{color:var(--err)}
+.warn{color:var(--warn)} .err{color:var(--err)} .muted{color:var(--muted)}
 
 .card{pointer-events:auto;background:var(--overlay);border:1px solid var(--line);border-radius:9px;
   padding:9px 12px;font-size:13px}

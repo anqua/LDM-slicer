@@ -25,6 +25,14 @@ main{position:relative;overflow:hidden}
 
 .overlay{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .viewbtns{position:absolute;right:14px;top:14px;display:flex;gap:6px}
+.slicebar{position:absolute;left:14px;right:14px;bottom:14px;max-width:640px;margin:0 auto}
+.layer-row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:10px}
+.btn.play{width:34px;padding:5px 0;text-align:center}
+#simTime{font-size:12px;align-self:center}
+.slicebar select.btn{padding:4px 6px}
+.layer-row input{width:100%;accent-color:var(--accent)}
+.legend{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-left:auto}
+.legend i{display:inline-block;width:10px;height:3px;margin-left:6px}
 #drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
   background:var(--bg);border:2px dashed var(--accent);font-size:18px;pointer-events:none}
 #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
@@ -39,4 +47,6 @@ main{position:relative;overflow:hidden}
   .lab{padding-left:8px;flex-shrink:0}
   .lab img{width:44px;height:44px}
   .viewbtns{top:auto;bottom:14px}
+  .slicebar{bottom:56px;left:8px;right:8px}
+  .legend{display:none}
 }

@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { S } from '../core/settings.js';
 import { cssVar } from '../core/theme.js';
-import { bedRect, bedCenter } from '../viewer/bed.js';
+import { bedCenter } from '../viewer/bed.js';
 
 const EPS = 1e-3;
 
@@ -15,6 +15,7 @@ export function createModel(scene) {
   let name = '';
   const rotation = new THREE.Matrix4();
   let mesh = null;
+  let visible = true;
 
   /** Set new source geometry. Call rebuild() (or change a transform setting) to place it. */
   function load(geometry, fileName) {
@@ -45,6 +46,7 @@ export function createModel(scene) {
     if (mesh) { mesh.geometry.dispose(); scene.remove(mesh); }
     mesh = new THREE.Mesh(g, okMat);
     mesh.material = fits() ? okMat : outMat;
+    mesh.visible = visible;
     scene.add(mesh);
   }
 
@@ -52,14 +54,10 @@ export function createModel(scene) {
     if (!mesh) return true;
     const bb = mesh.geometry.boundingBox;
     if (bb.max.z > S.bedZ + EPS) return false;
-    if (S.bedShape === 'round') {
-      const { cx, cy } = bedCenter(), p = mesh.geometry.attributes.position.array;
-      let r = 0;
-      for (let i = 0; i < p.length; i += 3) r = Math.max(r, Math.hypot(p[i] - cx, p[i + 1] - cy));
-      return r <= S.bedX / 2 + EPS;
-    }
-    const b = bedRect();
-    return bb.min.x >= b.x0 - EPS && bb.max.x <= b.x1 + EPS && bb.min.y >= b.y0 - EPS && bb.max.y <= b.y1 + EPS;
+    const { cx, cy } = bedCenter(), p = mesh.geometry.attributes.position.array;
+    let r = 0;
+    for (let i = 0; i < p.length; i += 3) r = Math.max(r, Math.hypot(p[i] - cx, p[i + 1] - cy));
+    return r <= S.bedX / 2 + EPS;
   }
 
   /** Rotate 90° about a world axis ('x' | 'y' | 'z'). */
@@ -78,9 +76,7 @@ export function createModel(scene) {
     if (!mesh) return null;
     const sz = new THREE.Vector3();
     mesh.geometry.boundingBox.getSize(sz);
-    const lim = S.bedShape === 'round'
-      ? Math.min(S.bedX * 0.95 / Math.hypot(sz.x, sz.y), S.bedZ / sz.z)
-      : Math.min(S.bedX * 0.95 / sz.x, S.bedY * 0.95 / sz.y, S.bedZ / sz.z);
+    const lim = Math.min(S.bedX * 0.95 / Math.hypot(sz.x, sz.y), S.bedZ / sz.z);
     return Math.floor(S.scale / 100 * lim * 1000) / 10;
   }
 
@@ -100,6 +96,11 @@ export function createModel(scene) {
   return {
     load, rebuild, rotate, resetRotation, fitScale, info,
     get loaded() { return !!base; },
+    /** Placed triangles (non-indexed, printer coordinates) for slicing, or null. */
+    positions: () => mesh?.geometry.attributes.position.array ?? null,
+    name: () => name,
+    fits: () => fits(),
+    setVisible(v) { if (mesh) mesh.visible = v; visible = v; },
     bounds: () => mesh?.geometry.boundingBox ?? null,
   };
 }

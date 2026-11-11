@@ -94,7 +94,7 @@ export function initPanels(actions) {
 
   renderFields($('pane-paths'), SCHEMA.paths, {
     before: `<h3>Suggestions</h3><div class="btns"><button class="btn" id="autoFromNozzle">Set layer & width from nozzle</button></div>`,
-    after: `<h3>Note</h3><div class="info">These settings are saved now and will drive the slicer in step 2.</div>`,
+    after: `<h3>Note</h3><div class="info">Changing a setting clears the preview; press <b>Slice</b> again to update the paths and G-code.</div>`,
   });
   $('autoFromNozzle').addEventListener('click', () =>
     update({ layerH: +(S.nozzle * 0.6).toFixed(2), lineW: +(S.nozzle * 1.2).toFixed(2) }));

@@ -6,13 +6,9 @@ export const SCHEMA = {
   printer: [
     { h: 'Machine' },
     { k: 'printerName', label: 'Printer name', type: 'text', def: 'My clay printer' },
-    { k: 'bedX', label: 'Bed width (X)', unit: 'mm', def: 300 },
-    { k: 'bedY', label: 'Bed depth (Y)', unit: 'mm', def: 300 },
+    // Round delta bed only (WASP 2040), origin at the bed center. `bedX` is the diameter.
+    { k: 'bedX', label: 'Bed diameter', unit: 'mm', def: 200 },
     { k: 'bedZ', label: 'Max height (Z)', unit: 'mm', def: 400 },
-    { k: 'origin', label: 'Origin (0,0)', type: 'select', def: 'corner',
-      opts: [['corner', 'Front-left corner'], ['center', 'Bed center']] },
-    { k: 'bedShape', label: 'Bed shape', type: 'select', def: 'rect',
-      opts: [['rect', 'Rectangular'], ['round', 'Round (delta)']] },
     { h: 'Extruder' },
     { k: 'nozzle', label: 'Nozzle diameter', unit: 'mm', def: 3, step: 0.1 },
     { k: 'extruderType', label: 'Extruder type', type: 'select', def: 'piston',
@@ -60,9 +56,25 @@ export const SCHEMA = {
     { k: 'firstSpeed', label: 'First layer speed', unit: 'mm/s', def: 15 },
     { k: 'minLayerTime', label: 'Min layer time', unit: 's', def: 0,
       help: 'Slows small layers so clay can firm up.' },
-    { h: 'Priming' },
-    { k: 'skirtLoops', label: 'Skirt loops', def: 1, step: 1 },
-    { k: 'skirtDist', label: 'Skirt distance', unit: 'mm', def: 10 },
+    // Start and end of print / paths. Modeled on Termite (Jauk, TU Graz): priming paths,
+    // first layer height, pre-fill, safe start and safe end.
+    { h: 'Start of print' },
+    { k: 'skirtLoops', label: 'Priming loops (skirt)', def: 1, step: 1,
+      help: 'Loops around the part before it starts, so clay is flowing evenly. 0 = none.' },
+    { k: 'skirtDist', label: 'Priming loop distance', unit: 'mm', def: 10 },
+    { k: 'firstLayerH', label: 'First layer height', unit: 'mm', def: 0.7, step: 0.1,
+      help: 'Often a little thicker than the other layers so it grips the bed.' },
+    { k: 'preFill', label: 'Pre-fill', unit: 'mm', def: 2, step: 0.5,
+      help: 'Clay pushed out in place before the first move, as mm of bead. Builds pressure; useful for big nozzles. 0 = off.' },
+    { k: 'safeStartLen', label: 'Safe start length', unit: 'mm', def: 6,
+      help: 'The first mm of every path are printed slowly so starts are not thin. 0 = off.' },
+    { k: 'safeStartSpeed', label: 'Safe start speed', unit: 'mm/s', def: 12 },
+    { h: 'End of paths' },
+    { k: 'safeEndLen', label: 'Safe end length', unit: 'mm', def: 6,
+      help: 'The last mm of every path slow down and ease off the flow so ends do not lift. 0 = off.' },
+    { k: 'safeEndSpeed', label: 'Safe end speed', unit: 'mm/s', def: 12 },
+    { k: 'safeEndFlow', label: 'Safe end final flow', unit: '%', def: 60,
+      help: 'Flow at the very end of a path; it ramps down to this from full flow.' },
   ],
   model: [
     { h: 'Transform' },
@@ -73,5 +85,5 @@ export const SCHEMA = {
 };
 
 // Settings that change the build volume / bed, and those that change the model placement.
-export const BED_KEYS = new Set(['bedX', 'bedY', 'bedZ', 'origin', 'bedShape']);
+export const BED_KEYS = new Set(['bedX', 'bedZ']);
 export const TRANSFORM_KEYS = new Set(['scale', 'offX', 'offY']);
