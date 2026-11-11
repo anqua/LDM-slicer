@@ -12,7 +12,7 @@ Being built step by step.
 
 - [x] **Step 1 – Workspace:** 3D view of the model on a bed sized to your printer. Load an STL (or the demo vase), scale, rotate, offset, scale to fit the bed, and see a warning when it doesn't fit. Includes menus for printer details and print-path settings, saved in the browser, with JSON export and import.
 - [x] **Step 2 – Slicing:** cut the mesh into layers, with spiral-vase and layer-by-layer modes, walls, solid bottom and priming loops (skirt).
-- [x] **Step 3 – Toolpath preview:** paths colored by type, a layer slider (arrow keys step through layers), optional travel moves and model overlay. **Play** (or Space) simulates the print at 20–3000× speed: the paths grow move by move and the printer head follows the nozzle. On the delta printer, the carriages and arms move with it.
+- [x] **Step 3 – Toolpath preview:** paths colored by type, a layer slider (arrow keys step through layers), optional travel moves and model overlay. **Play** (or Space) simulates the print at 10×, 20× or 30× speed: the paths grow move by move and the printer head follows the nozzle. On the delta printer, the carriages and arms move with it.
 - [x] **Step 4 – G-code export:** E values, speeds, min layer time, start and end G-code, plus clay-specific start and end handling modeled on [Termite](https://www.food4rhino.com/en/app/termite): first layer height, pre-fill, safe start and safe end.
 
 Not yet: top surfaces and sparse infill (layered mode prints walls and a solid bottom only), and acceleration in the time estimate.
