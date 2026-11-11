@@ -1,10 +1,11 @@
-// Layer contours -> printable toolpaths: priming loops (skirt), walls, solid bottom, spiral vase.
+// Layer contours -> printable toolpaths: priming loops (skirt), walls, solid bottom, infill, spiral vase.
 //
 // Output: { layers: [{ z, h, paths: [Path] }], warnings: [string] }
-// Path:   { type: 'skirt'|'outer'|'inner'|'bottom'|'spiral', pts: [[x, y, z], ...], h, speed, join? }
+// Path:   { type: 'skirt'|'outer'|'inner'|'bottom'|'infill'|'spiral', pts: [[x, y, z], ...], h, speed, join? }
 // `join: true` means the path continues straight on from the previous one (spiral vase):
 // no travel, no safe end / safe start in between.
-import { area, contains, offset, startAt, nearestIndex, convexHull, grow, length } from './polygon.js';
+import { area, contains, offset, startAt, nearestIndex, convexHull, grow, length, simplifyLine } from './polygon.js';
+import { fillLines, orderLines, zigzag, tpmsLines } from './infill.js';
 
 /** Group a layer's loops into islands: one outer (CCW) loop plus the holes directly inside it. */
 function islands(loops) {
@@ -30,46 +31,6 @@ function seamLoop(loop, seam, pos, rng) {
   return [...l, l[0]];
 }
 
-/** Scanline fill of the region bounded by `polys` (even-odd), lines at `angle` degrees, spaced `gap`. */
-function fillLines(polys, angle, gap) {
-  const a = angle * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
-  const rot = ([x, y]) => [x * c + y * s, -x * s + y * c];        // world -> scan frame
-  const back = ([x, y]) => [x * c - y * s, x * s + y * c];
-  const rp = polys.map(p => p.map(rot));
-  let y0 = Infinity, y1 = -Infinity;
-  for (const p of rp) for (const q of p) { y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }
-  const segs = [];
-  for (let y = y0 + gap / 2; y < y1; y += gap) {
-    const xs = [];
-    for (const p of rp) for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
-      const [xi, yi] = p[i], [xj, yj] = p[j];
-      if ((yi > y) !== (yj > y)) xs.push(xi + (y - yi) / (yj - yi) * (xj - xi));
-    }
-    xs.sort((m, n) => m - n);
-    for (let k = 0; k + 1 < xs.length; k += 2) if (xs[k + 1] - xs[k] > gap * 0.3) segs.push([back([xs[k], y]), back([xs[k + 1], y])]);
-  }
-  return segs;
-}
-
-/** Order fill segments greedily from `pos`, joining near neighbours into zig-zag polylines. */
-function orderFill(segs, pos, joinDist) {
-  const left = [...segs], out = [];
-  let cur = pos ?? segs[0]?.[0], line = null;
-  while (left.length) {
-    let best = 0, bd = Infinity, flip = false;
-    for (let i = 0; i < left.length; i++) {
-      const d0 = dist2(cur, left[i][0]), d1 = dist2(cur, left[i][1]);
-      if (d0 < bd) { bd = d0; best = i; flip = false; }
-      if (d1 < bd) { bd = d1; best = i; flip = true; }
-    }
-    const [sg] = left.splice(best, 1);
-    const [p, q] = flip ? [sg[1], sg[0]] : sg;
-    if (line && Math.sqrt(bd) <= joinDist) line.push(p, q);
-    else { line = [p, q]; out.push(line); }
-    cur = q;
-  }
-  return out;
-}
 
 /** Walls and (optionally) solid fill for one layer in layer-by-layer mode. */
 function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
@@ -93,14 +54,55 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
       pos = pts.at(-1);
     }
 
+    const add = (type, lines) => {
+      for (const line of lines) {
+        if (line.length < 2) continue;
+        paths.push({ type, pts: line.map(([x, y]) => [x, y, z]), h });
+        pos = paths.at(-1).pts.at(-1);
+      }
+    };
+    // Region inside the walls, overlapping the innermost wall by 15 % of a line.
+    const inset = o.lineW * (walls + 0.5 - 0.15);
+    const clipOf = d => bounds.map(b => offset(b, d)).filter(Boolean);
+    const usable = c => c.length && c.some(p => area(p) > 0);
+
     if (solid) {
-      const clip = bounds.map(b => offset(b, o.lineW * (walls + 0.5 - 0.15))).filter(Boolean);
-      if (clip.length && clip.some(c => area(c) > 0)) {
-        const angle = o.infillAngle + (layerIdx % 2 ? 90 : 0);
-        for (const line of orderFill(fillLines(clip, angle, o.lineW), pos, o.lineW * 2.5)) {
-          paths.push({ type: 'bottom', pts: line.map(([x, y]) => [x, y, z]), h });
-          pos = paths.at(-1).pts.at(-1);
+      const clip = clipOf(inset);
+      if (usable(clip)) add('bottom', orderLines(fillLines(clip, o.infillAngle + (layerIdx % 2 ? 90 : 0), o.lineW), pos, o.lineW * 2.5));
+      continue;
+    }
+
+    const sp = Math.max(o.lineW * 2, o.infillSpacing);
+    switch (o.infill) {
+      case 'zigzag': {
+        // Extra inner wall `zigzagWidth` in from the walls; a wave bridges the gap.
+        for (const b of bounds) {
+          const { wall, zig } = zigzag(b, o.lineW * (walls - 0.5), Math.max(o.lineW * 2, o.zigzagWidth), sp);
+          if (!wall) continue;
+          add('inner', [seamLoop(wall, 'nearest', pos, rng)]);
+          const wave = zig.slice(0, -1), r = startAt(wave, pos ? nearestIndex(wave, pos[0], pos[1]) : 0);
+          add('infill', [[...r, r[0]]]);
         }
+        break;
+      }
+      case 'lines':
+      case 'grid': {
+        const clip = clipOf(inset);
+        if (!usable(clip)) break;
+        const a = o.infillAngle + (o.infill === 'lines' && layerIdx % 2 ? 90 : 0);
+        const segs = fillLines(clip, a, sp);
+        if (o.infill === 'grid') segs.push(...fillLines(clip, a + 90, sp));
+        add('infill', orderLines(segs, pos, o.lineW * 2.5));
+        break;
+      }
+      case 'gyroid':
+      case 'schwarzD': {
+        const clip = clipOf(inset);
+        if (!usable(clip)) break;
+        const res = Math.min(o.lineW, sp / 10);
+        const lines = tpmsLines(clip, z, o.infill, sp, res).map(l => simplifyLine(l, 0.05));
+        add('infill', orderLines(lines, pos, o.lineW * 2));
+        break;
       }
     }
   }
@@ -168,6 +170,7 @@ export function buildToolpaths(sliced, o) {
 
   if (multiIsland) warnings.push('Spiral mode prints one outline per layer; some layers have several parts and only the largest is printed.');
   if (spiral && o.walls > 1) warnings.push('Spiral mode always prints a single wall.');
+  if (spiral && o.infill !== 'none') warnings.push('Infill is only printed in layer-by-layer mode.');
 
   // Speeds: first layer, then normal, capped by the machine; stretched to meet the min layer time.
   layers.forEach((l, i) => {
