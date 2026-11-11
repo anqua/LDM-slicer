@@ -24,7 +24,8 @@
   <label class="btn">Open STL<input id="file" type="file" accept=".stl" hidden></label>
   <button class="btn" id="demo">Demo vase</button>
   <div class="spacer"></div>
-  <button class="btn primary" id="slice" disabled title="Coming in step 2">Slice</button>
+  <button class="btn primary" id="slice" disabled title="Load a model first">Slice</button>
+  <button class="btn" id="export" disabled title="Slice first">Export G-code</button>
   <!-- Lockup matches the @A website footer: logo + "@A | Art / Technology / Architecture", Space Grotesk 500 -->
   <a class="lab" href="https://anqua.github.io/at-a/" target="_blank" rel="noopener"
      title="@A | Art, Technology, Architecture">
@@ -48,7 +49,31 @@
   <main>
     <div id="view"></div>
     <div id="empty">Drop an STL file here<br>or use “Open STL” / “Demo vase”</div>
-    <div class="overlay"><div class="card" id="status">No model loaded</div></div>
+    <div class="overlay">
+      <div class="card" id="status">No model loaded</div>
+      <div class="card" id="sliceInfo" hidden></div>
+    </div>
+    <div class="card slicebar" id="slicebar" hidden>
+      <div class="layer-row">
+        <button class="btn play" id="play" title="Play the print (Space)" aria-label="Play">▶</button>
+        <label for="layer">Layer</label>
+        <input id="layer" type="range" min="1" max="1" value="1">
+        <span id="layerLabel" class="mono"></span>
+      </div>
+      <div class="btns">
+        <select id="simSpeed" class="btn" title="Playback speed">
+          <option value="20">20×</option>
+          <option value="100">100×</option>
+          <option value="300" selected>300×</option>
+          <option value="1000">1000×</option>
+          <option value="3000">3000×</option>
+        </select>
+        <span id="simTime" class="mono muted"></span>
+        <button class="btn toggle" id="showModel" role="switch" aria-checked="false"><span class="switch" aria-hidden="true"></span>Model</button>
+        <button class="btn toggle" id="showTravel" role="switch" aria-checked="false"><span class="switch" aria-hidden="true"></span>Travel</button>
+        <span class="legend"><i style="background:var(--path-skirt)"></i>Priming <i style="background:var(--path-outer)"></i>Outer <i style="background:var(--path-inner)"></i>Inner <i style="background:var(--path-bottom)"></i>Bottom</span>
+      </div>
+    </div>
     <div class="viewbtns">
       <button class="btn toggle" id="printerBtn" role="switch" aria-checked="false"
               title="Show or hide the printer (P)"><span class="switch" aria-hidden="true"></span>Printer</button>

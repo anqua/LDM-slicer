@@ -30,10 +30,16 @@ export function createViewer(container) {
   new ResizeObserver(resize).observe(container);
   resize();
 
-  renderer.setAnimationLoop(() => {
+  // Per-frame callbacks get the elapsed time in seconds (capped, so a background tab doesn't jump).
+  const frameFns = new Set();
+  let last = performance.now();
+  renderer.setAnimationLoop(now => {
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    for (const fn of frameFns) fn(dt);
     rig.controls.update();
     renderer.render(scene, rig.camera);
   });
 
-  return { renderer, scene, rig };
+  return { renderer, scene, rig, onFrame: fn => frameFns.add(fn) };
 }

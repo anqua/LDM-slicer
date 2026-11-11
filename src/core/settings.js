@@ -37,6 +37,7 @@ function migrate(saved) {
 export const S = { ...defaults };
 try { Object.assign(S, migrate(JSON.parse(localStorage.getItem(STORE_KEY) || '{}'))); } catch { /* storage unavailable */ }
 delete S.palette; delete S.font; delete S.showPrinter;   // obsolete keys
+delete S.bedY; delete S.origin; delete S.bedShape;      // rectangular beds removed: WASP 2040 (round, centered) only
 
 const listeners = new Set();
 

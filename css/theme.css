@@ -12,4 +12,6 @@
   --scene-bg:#000000; --bed:#050505; --grid:#2a2a2a; --grid2:#454545; --vol:#454545;
   --model:#d6d1c9; --model-out:#ff3b3b;
   --printer:#5a5a5a; --printer-dark:#1f1f1f;   /* schematic printer frame */
+  /* Toolpath preview (viewer/toolpath.js); the current layer uses --accent. */
+  --path-outer:#d6d1c9; --path-inner:#9c8f80; --path-bottom:#c2703d; --path-skirt:#4da3ff; --path-travel:#3a3a3a;
 }

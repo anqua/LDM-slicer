@@ -16,15 +16,14 @@ export const PRINTERS = {
       + '(Marlin-based, unverified).',
     values: {
       printerName: 'Delta WASP 2040 Clay',
-      bedShape: 'round', origin: 'center',
-      bedX: 200, bedY: 200, bedZ: 400,
+      bedX: 200, bedZ: 400,
       nozzle: 1.2, extruderType: 'auger',     // LDM: pressurized tank feeding a screw extruder
       reservoir: 3000,
       maxSpeed: 150, travelSpeed: 150,
       flavor: 'marlin',
     },
     // Machine 490 × 440 × 870 mm. `below`: frame base below the bed surface (estimate).
-    frame: { kind: 'delta', footprint: 490, height: 870, below: 120 },
+    frame: { footprint: 490, height: 870, below: 120 },
   },
 };
 
