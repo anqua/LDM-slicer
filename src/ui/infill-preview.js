@@ -1,7 +1,7 @@
-// Infill pattern picker: one tile per pattern, each a top view of a round sample sliced with the
-// real infill code (slicer/infill.js) and the current settings, so the preview is what will print.
+// Infill pattern preview: the selected pattern (none shown for "None"), as a top view of a round sample
+// sliced with the real infill code (slicer/infill.js) and the current settings, so it is what will print.
 // Lines are drawn at bead width; a darker colour shows how the pattern changes on the next layer.
-import { S, update, onChange } from '../core/settings.js';
+import { S, onChange } from '../core/settings.js';
 import { offset } from '../slicer/polygon.js';
 import { fillLines, zigzag, tpmsLines } from '../slicer/infill.js';
 
@@ -65,7 +65,7 @@ function tileSVG(id, R) {
   </svg>`;
 }
 
-/** Insert the tiles under the "Infill pattern" row and keep them in sync with settings. */
+/** Insert the preview under the "Infill pattern" row and keep it in sync with settings. */
 export function initInfillPreview() {
   const sel = document.getElementById('f_infill');
   if (!sel) return;
@@ -74,27 +74,23 @@ export function initInfillPreview() {
   sel.closest('.row').after(box);
 
   let timer = 0;
+  // Only the selected pattern is shown; nothing for "None (hollow)". The dropdown is the picker.
   const render = () => {
+    const cur = PATTERNS.find(p => p.id === S.infill);
+    if (!cur || cur.id === 'none') { box.hidden = true; box.innerHTML = ''; return; }
     const sp = Math.max(S.lineW * 2, S.infillSpacing);
     const R = Math.min(150, Math.max(40, sp * 3));            // a few cells across, whatever the spacing
-    const cur = PATTERNS.find(p => p.id === S.infill) ?? PATTERNS[0];
+    const hasNext = cur.id === 'lines' || cur.id === 'gyroid' || cur.id === 'schwarzD';
+    box.hidden = false;
     box.innerHTML = `
-      <div class="infill-tiles" role="radiogroup" aria-label="Infill pattern">
-        ${PATTERNS.map(p => `
-          <button type="button" class="infill-tile${p.id === cur.id ? ' on' : ''}" role="radio"
-                  aria-checked="${p.id === cur.id}" data-id="${p.id}" title="${p.desc}">
-            ${tileSVG(p.id, R)}<span>${p.name}</span>
-          </button>`).join('')}
-      </div>
+      <div class="infill-tile" role="img" aria-label="${cur.name} infill, top view">${tileSVG(cur.id, R)}</div>
       <div class="infill-legend">
         <span><i style="background:var(--path-outer)"></i>Walls</span>
-        <span><i style="background:var(--path-infill)"></i>This layer</span>
-        <span><i style="background:var(--path-infill-next)"></i>Next layer</span>
+        <span><i style="background:var(--path-infill)"></i>${hasNext ? 'This layer' : 'Infill'}</span>
+        ${hasNext ? '<span><i style="background:var(--path-infill-next)"></i>Next layer</span>' : ''}
         <span class="muted">Sample Ø${Math.round(2 * R)} mm, top view</span>
       </div>
       <small class="infill-desc"><b>${cur.name}:</b> ${cur.desc}</small>`;
-    box.querySelectorAll('.infill-tile').forEach(t =>
-      t.addEventListener('click', () => update({ infill: t.dataset.id })));
   };
 
   onChange(keys => {
