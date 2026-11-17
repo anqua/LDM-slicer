@@ -3,6 +3,7 @@ import { SCHEMA } from '../core/schema.js';
 import { S, update, onChange, exportSettings, importSettings, resetSettings } from '../core/settings.js';
 import { PRINTERS, presetDiff } from '../core/printers.js';
 import { renderFields } from './form.js';
+import { initInfillPreview } from './infill-preview.js';
 
 const LABELS = Object.fromEntries(Object.values(SCHEMA).flat().filter(f => f.k).map(f => [f.k, f.label]));
 
@@ -96,6 +97,7 @@ export function initPanels(actions) {
     before: `<h3>Suggestions</h3><div class="btns"><button class="btn" id="autoFromNozzle">Set layer & width from nozzle</button></div>`,
     after: `<h3>Note</h3><div class="info">Changing a setting clears the preview; press <b>Slice</b> again to update the paths and G-code.</div>`,
   });
+  initInfillPreview();
   $('autoFromNozzle').addEventListener('click', () =>
     update({ layerH: +(S.nozzle * 0.6).toFixed(2), lineW: +(S.nozzle * 1.2).toFixed(2) }));
 

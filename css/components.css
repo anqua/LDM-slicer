@@ -42,6 +42,19 @@ textarea{width:100%;min-height:110px;background:var(--panel2);border:1px solid v
   border-radius:6px;padding:7px;font:12px/1.4 var(--font-mono);resize:vertical}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 
+/* Infill pattern tiles (src/ui/infill-preview.js) */
+.infill-preview{margin:4px 0 10px}
+.infill-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.infill-tile{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px;cursor:pointer;
+  background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--muted);font-size:12px}
+.infill-tile:hover{border-color:var(--accent)}
+.infill-tile.on{border-color:var(--accent);color:var(--text)}
+.infill-tile svg{width:100%;aspect-ratio:1;display:block}
+.infill-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:8px;font-size:12px;color:var(--muted)}
+.infill-legend i{display:inline-block;width:10px;height:3px;margin-right:5px;vertical-align:middle}
+.infill-desc{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+.infill-desc b{color:var(--text);font-weight:500}
+
 .info{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
   font-size:13px;color:var(--muted)}
 .info b{color:var(--text);font-weight:600}
