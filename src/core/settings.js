@@ -39,6 +39,13 @@ try { Object.assign(S, migrate(JSON.parse(localStorage.getItem(STORE_KEY) || '{}
 delete S.palette; delete S.font; delete S.showPrinter;   // obsolete keys
 delete S.bedY; delete S.origin; delete S.bedShape;      // rectangular beds removed: WASP 2040 (round, centered) only
 
+// Saved numbers outside a field's min/max (e.g. a 1.2 mm nozzle after the range became 1.5–3) reset to default.
+for (const group of Object.values(SCHEMA)) for (const f of group) {
+  if (!f.k || (f.min == null && f.max == null)) continue;
+  const v = S[f.k];
+  if (typeof v !== 'number' || (f.min != null && v < f.min) || (f.max != null && v > f.max)) S[f.k] = defaults[f.k];
+}
+
 const listeners = new Set();
 
 export function save() {

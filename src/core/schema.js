@@ -1,6 +1,7 @@
 // Settings definition. Drives the sidebar forms and supplies defaults.
 // Printer `def` values are generic fallbacks; the default preset (core/printers.js) overrides them.
-// Field: { k, label, def, type?: 'num'|'select'|'text'|'area', unit?, step?, opts?, help? }
+// Field: { k, label, def, type?: 'num'|'select'|'text'|'area', unit?, step?, min?, max?, opts?, help? }
+// min/max: numeric bounds, enforced by the form (clamp) and on load (out-of-range saved values reset to default).
 // Heading: { h }
 export const SCHEMA = {
   printer: [
@@ -10,7 +11,8 @@ export const SCHEMA = {
     { k: 'bedX', label: 'Bed diameter', unit: 'mm', def: 200 },
     { k: 'bedZ', label: 'Max height (Z)', unit: 'mm', def: 400 },
     { h: 'Extruder' },
-    { k: 'nozzle', label: 'Nozzle diameter', unit: 'mm', def: 3, step: 0.1 },
+    { k: 'nozzle', label: 'Nozzle diameter', unit: 'mm', def: 2, step: 0.1, min: 1.5, max: 3,
+      help: 'Supported range 1.5–3 mm.' },
     { k: 'extruderType', label: 'Extruder type', type: 'select', def: 'piston',
       opts: [['piston', 'Piston / ram'], ['auger', 'Auger / screw'], ['pneumatic', 'Pneumatic']] },
     { k: 'eMode', label: 'E value meaning', type: 'select', def: 'filament',
@@ -44,8 +46,8 @@ export const SCHEMA = {
     { k: 'wallOrder', label: 'Wall order', type: 'select', def: 'outer',
       opts: [['outer', 'Outer first'], ['inner', 'Inner first']] },
     { k: 'bottomLayers', label: 'Solid bottom layers', def: 3, step: 1 },
-    { k: 'infillAngle', label: 'Fill angle', unit: '°', def: 45,
-      help: 'Direction of the bottom fill, and of lines / grid infill.' },
+    { k: 'infillAngle', label: 'Infill angle', unit: '°', def: 45,
+      help: 'Direction of the solid bottom infill, and of lines / grid infill.' },
     { h: 'Infill' },
     { k: 'infill', label: 'Infill pattern', type: 'select', def: 'none',
       opts: [['none', 'None (hollow)'], ['zigzag', 'Zig-zag between walls'], ['lines', 'Lines'], ['grid', 'Grid'],

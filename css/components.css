@@ -26,7 +26,9 @@
 .pane.on{display:block}
 h3{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:18px 0 8px}
 
-.row{display:grid;grid-template-columns:1fr 112px;align-items:center;gap:8px;margin:6px 0}
+/* Value column grows with the sidebar (min 112px, up to ~half), so long dropdown options stay readable. */
+.row{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,48%);align-items:center;gap:8px;margin:6px 0}
+.row select{text-overflow:ellipsis}
 .row label{color:var(--text)}
 .row small{grid-column:1/-1;color:var(--muted);margin-top:-4px;font-size:12px}
 .row input,.row select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 7px}

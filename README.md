@@ -52,7 +52,7 @@ src/
   slicer/
     slice.js            mesh -> layer heights and closed contours (outer CCW, holes CW)
     polygon.js          2D helpers: area, offset, simplify, convex hull
-    paths.js            contours -> toolpaths: priming loops, walls, bottom fill, infill, spiral
+    paths.js            contours -> toolpaths: priming loops, walls, solid bottom infill, infill, spiral
     infill.js           fill patterns: scanlines, zig-zag, gyroid / Schwarz D (marching squares)
     gcode.js            toolpaths -> G-code, with pre-fill, safe start and safe end
   ui/
@@ -62,14 +62,15 @@ src/
     status.js           model summary (status card and Model pane)
     view-controls.js    3D/Top/Front buttons, projection toggle, keyboard shortcuts
     file-input.js       Open STL button and drag-and-drop
+    sidebar-resize.js   drag the sidebar edge to resize it (width saved)
 ```
 
 Data flow: UI calls `update({...})` in `core/settings.js`. `main.js` listens with `onChange` and rebuilds the bed and model, then refreshes the status. Modules don't share globals; they're passed what they need.
 
 ## Settings
 
-- **Printer:** built for the Delta WASP 2040 Clay only: round bed with the origin at its center. Settings: bed diameter and height, nozzle, extruder type, how E is interpreted (virtual filament or volume), firmware, start and end G-code.
-- **Print paths:** layer height, line width, spiral or layered mode, walls, bottom layers, fill angle, infill pattern / spacing / zig-zag width, seam, flow, retraction, speeds.
+- **Printer:** built for the Delta WASP 2040 Clay only: round bed with the origin at its center. Settings: bed diameter and height, nozzle (1.5–3 mm), extruder type, how E is interpreted (virtual filament or volume), firmware, start and end G-code.
+- **Print paths:** layer height, line width, spiral or layered mode, walls, bottom layers, infill angle, infill pattern / spacing / zig-zag width, seam, flow, retraction, speeds.
 - **Start of print / end of paths** (after Termite by Julian Jauk, TU Graz):
   - *Priming loops* around the part before it starts, and their distance.
   - *First layer height*, separate from the other layers.

@@ -15,7 +15,9 @@ function fieldHTML(f) {
   else if (f.type === 'text')
     input = `<input id="${id}" type="text">`;
   else
-    input = `<div class="unit"><input id="${id}" type="number" step="${f.step ?? 'any'}">${f.unit ? `<span>${f.unit}</span>` : ''}</div>`;
+    input = `<div class="unit"><input id="${id}" type="number" step="${f.step ?? 'any'}"`
+      + `${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}>`
+      + `${f.unit ? `<span>${f.unit}</span>` : ''}</div>`;
   return `<div class="row"><label for="${id}">${f.label}</label>${input}${help}</div>`;
 }
 
@@ -31,8 +33,13 @@ export function renderFields(container, fields, { before = '', after = '' } = {}
     inputs.set(f.k, el);
     const live = f.type === 'area' || f.type === 'text';
     el.addEventListener(live ? 'input' : 'change', () => {
-      const v = isNumeric(f) ? parseFloat(el.value) : el.value;
-      if (isNumeric(f) && !Number.isFinite(v)) { el.value = S[f.k]; return; }
+      let v = isNumeric(f) ? parseFloat(el.value) : el.value;
+      if (isNumeric(f)) {
+        if (!Number.isFinite(v)) { el.value = S[f.k]; return; }
+        if (f.min != null) v = Math.max(f.min, v);       // clamp to the field's range
+        if (f.max != null) v = Math.min(f.max, v);
+        el.value = v;
+      }
       update({ [f.k]: v });
     });
   }

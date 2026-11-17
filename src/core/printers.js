@@ -11,13 +11,13 @@ export const PRINTERS = {
   //   https://burg-halle.de/en/university/facilities/burglabs/biolab/infrastructure-biolab/3d-printer
   wasp2040: {
     name: 'Delta WASP 2040 Clay',
-    notes: 'Ø200 × 400 mm build volume · 1.2 mm LDM nozzle (2 mm included) · 3 L tank · '
+    notes: 'Ø200 × 400 mm build volume · 2 mm LDM nozzle (1.2 mm also shipped, below the supported 1.5–3 mm) · 3 L tank · '
       + '150 mm/s print and travel · 500 mm/s² · min layer 0.5 mm. Firmware is WASP\'s own '
       + '(Marlin-based, unverified).',
     values: {
       printerName: 'Delta WASP 2040 Clay',
       bedX: 200, bedZ: 400,
-      nozzle: 1.2, extruderType: 'auger',     // LDM: pressurized tank feeding a screw extruder
+      nozzle: 2, extruderType: 'auger',       // LDM: pressurized tank feeding a screw extruder
       reservoir: 3000,
       maxSpeed: 150, travelSpeed: 150,
       flavor: 'marlin',
