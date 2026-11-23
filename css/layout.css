@@ -43,9 +43,8 @@ header .btn{white-space:nowrap;flex-shrink:0}
   color:#fff;text-decoration:none;font-family:"Space Grotesk",system-ui,sans-serif;font-weight:500;
   font-size:13px;line-height:1.3;text-align:left}
 .lab img{width:56px;height:56px;display:block;flex-shrink:0}      /* the logo keeps its size */
-/* When the slicer was last updated, under the logo. */
-/* Under the logo, left edge on the logo's. width:0 + min-width:100% keeps it from widening the lockup: the text wraps onto the next line instead. */
-.updated{font-size:11px;line-height:1.25;color:var(--muted);font-family:var(--font-mono);width:0;min-width:100%;overflow-wrap:anywhere}
+/* When the slicer was last updated: bottom right corner of the screen. */
+.updated{position:fixed;right:12px;bottom:6px;z-index:5;font-size:11px;line-height:1.2;color:var(--muted);font-family:var(--font-mono);white-space:nowrap;pointer-events:none}
 .updated[hidden]{display:none}
 
 .app{--side-w:330px;position:relative;display:grid;grid-template-columns:var(--side-w) 1fr;
@@ -63,7 +62,7 @@ main{position:relative;overflow:hidden}
 
 .overlay{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 .viewbtns{position:absolute;right:14px;top:14px;display:flex;gap:6px}
-.slicebar{position:absolute;left:14px;right:14px;bottom:14px;max-width:640px;margin:0 auto}
+.slicebar{position:absolute;left:14px;right:14px;bottom:30px;max-width:640px;margin:0 auto}
 .layer-row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:10px}
 .btn.play{width:34px;padding:5px 0;text-align:center}
 #simTime{font-size:12px;align-self:center}
@@ -82,11 +81,11 @@ main{position:relative;overflow:hidden}
   main{order:-1} aside{border-right:0;border-top:1px solid var(--line)}
   header{padding:0 12px;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .brand span{display:none}
   header .spacer{display:none}
-  .lab span,.updated{display:none}
+  .lab span{display:none}
   .lab-block{padding-left:8px;flex-shrink:0}
   .lab img{width:44px;height:44px}
-  .viewbtns{top:auto;bottom:14px}
-  .slicebar{bottom:56px;left:8px;right:8px}
+  .viewbtns{top:auto;bottom:30px}
+  .slicebar{bottom:72px;left:8px;right:8px}
   .legend{display:none}
   .menu-wrap{position:static}
   .slice-menu{position:fixed;top:calc(var(--header-h) + 4px);left:8px;right:8px;width:auto}
