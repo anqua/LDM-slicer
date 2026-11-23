@@ -15,7 +15,7 @@ export function createToolpathView(scene) {
   scene.add(group);
   let lines = null, travels = null, current = null, tip = null;
   // Material view: the beads as solid tubes (built when first needed), and the nozzle at the tip.
-  let solid = null, solidK = 8, nozzleMesh = null, movesRef = null, ctx = null, mode = "lines", lastT = 0;
+  let solid = null, solidK = 8, nozzleMesh = null, movesRef = null, ctx = null, mode = "lines", lastT = 0, machineShown = false;
   let showTravel = false;
 
   // Time line. One entry per move, in print order (typed arrays: there can be 100k+ moves).
@@ -118,7 +118,7 @@ export function createToolpathView(scene) {
     if (lines) lines.visible = !isSolid;
     if (current) current.visible = !isSolid;
     if (solid) solid.visible = isSolid;
-    if (nozzleMesh) nozzleMesh.visible = isSolid;
+    if (nozzleMesh) nozzleMesh.visible = isSolid && !machineShown;
   }
 
   /**
@@ -190,6 +190,8 @@ export function createToolpathView(scene) {
     if (solid) {
       solid.geometry.setDrawRange(0, segsDone * solidK * 6);
       nozzleMesh.position.set(p[0], p[1], p[2]);
+      // The printer model has its own nozzle, and after the last move the head parks: the marker would hang in the air.
+      nozzleMesh.visible = mode === "solid" && !machineShown && t < duration - 1e-6;
     }
     return { pos: p, layer: li, t };
   }
@@ -202,6 +204,9 @@ export function createToolpathView(scene) {
 
   function setShowTravel(v) { showTravel = v; if (travels) travels.visible = v; }
 
+  /** The printer model is shown: it carries the nozzle, so the marker (a nozzle of the real size) is hidden. */
+  function setMachineShown(v) { machineShown = v; if (nozzleMesh) { applyMode(); simulate(lastT); } }
+
   /** "lines": the toolpath only. "solid": the beads with their real width and height, and the nozzle. */
   function setMode(m) {
     mode = m === "solid" ? "solid" : "lines";
@@ -209,7 +214,7 @@ export function createToolpathView(scene) {
   }
 
   return {
-    set, setFromGcode, clear, simulate, setLayer, setShowTravel, setMode,
+    set, setFromGcode, clear, simulate, setLayer, setShowTravel, setMode, setMachineShown,
     get mode() { return mode; },
     get active() { return !!lines; },
     get duration() { return duration; },

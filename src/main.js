@@ -164,6 +164,7 @@ function frameView(view = 'iso') {
 const printerBtn = document.getElementById('printerBtn');
 function setPrinterVisible(v, persist = true) {
   printer.setVisible(v);
+  toolpath.setMachineShown(v);
   printerBtn.classList.toggle('on', v);
   printerBtn.setAttribute('aria-checked', String(v));
   if (persist) { S.printerVisible = v; save(); }
