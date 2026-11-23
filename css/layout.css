@@ -5,11 +5,16 @@ button,select,input,textarea{font:inherit;color:inherit}
 input[type=number],textarea,.mono{font-family:var(--font-mono)}
 
 :root{--header-h:80px}                     /* room for the logo and the update line under it */
-header{height:var(--header-h);display:flex;align-items:center;gap:10px;padding:0 16px;
+body{display:flex;flex-direction:column}
+/* The header wraps onto a second row when the buttons do not fit; the app fills the rest. */
+header{min-height:var(--header-h);flex-wrap:wrap;row-gap:6px;padding-top:6px;padding-bottom:6px;
+  display:flex;align-items:center;gap:10px;padding-left:16px;padding-right:16px;
   border-bottom:1px solid var(--line);background:var(--panel)}
 .brand{font-weight:650;letter-spacing:.2px;display:flex;align-items:center;gap:8px;margin-right:8px}
 .brand i{width:14px;height:14px;border-radius:50%;background:var(--accent);display:inline-block}
 .spacer{flex:1}
+a.btn{text-decoration:none;color:var(--text);white-space:nowrap;display:inline-block}
+header .btn{white-space:nowrap;flex-shrink:0}
 .btn-group{display:flex;gap:0}
 .btn-group .btn:first-child{border-top-right-radius:0;border-bottom-right-radius:0}
 .btn-group select.btn{border-left:0;border-top-left-radius:0;border-bottom-left-radius:0;padding:6px 6px}
@@ -28,7 +33,7 @@ header{height:var(--header-h);display:flex;align-items:center;gap:10px;padding:0
 .updated[hidden]{display:none}
 
 .app{--side-w:330px;position:relative;display:grid;grid-template-columns:var(--side-w) 1fr;
-  height:calc(100% - var(--header-h))}
+  flex:1;min-height:0}
 
 /* Drag handle on the sidebar's right edge (src/ui/sidebar-resize.js). Double-click resets the width. */
 .side-resize{position:absolute;top:0;bottom:0;left:calc(var(--side-w) - 4px);width:8px;cursor:col-resize;z-index:5;
@@ -59,7 +64,7 @@ main{position:relative;overflow:hidden}
   :root{--header-h:64px}
   .app{grid-template-columns:1fr;grid-template-rows:55% 45%}
   main{order:-1} aside{border-right:0;border-top:1px solid var(--line)}
-  header{padding:0 12px;gap:6px;overflow-x:auto;scrollbar-width:none} .brand span{display:none}
+  header{padding:0 12px;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .brand span{display:none}
   header .spacer{display:none}
   .lab span,.updated{display:none}
   .lab-block{padding-left:8px;flex-shrink:0}
