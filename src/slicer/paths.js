@@ -85,7 +85,7 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
 
     if (solid) {
       // Bottom layers: own pattern, angle and spacing (Bottom layers settings).
-      const gap = Math.max(o.lineW * 0.5, o.bottomSpacing || o.lineW);
+      const gap = Math.max(o.lineW * 0.5, (o.bottomSpacingX ?? 1) * o.nozzle);   // spacing = factor × nozzle
       const joinDist = Math.max(o.lineW * 2.5, gap * 1.2);
       if (o.bottomPattern === 'concentric') {
         // Rings parallel to the outline (and around holes), from the innermost wall inward. Offsets of

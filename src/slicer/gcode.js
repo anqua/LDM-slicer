@@ -147,7 +147,7 @@ export function toGcode(tp, o, meta = {}) {
     `; Printer: ${o.printerName} (${o.flavor})`,
     `; Nozzle: ${o.nozzle} mm · line width ${o.lineW} mm · layer ${o.layerH} mm · first layer ${o.firstLayerH} mm`,
     `; Mode: ${o.mode === 'spiral' ? 'spiral vase' : `layer by layer, ${o.walls} wall(s)`} · bottom layers ${o.bottomLayers}`,
-    `; Bottom infill: ${o.bottomPattern} · ${o.bottomAngle}° · spacing ${o.bottomSpacing} mm · flow ${o.bottomFlow} % · ${o.bottomSpeed} mm/s`,
+    `; Bottom infill: ${o.bottomPattern} · ${o.bottomAngle}° · spacing ${o.bottomSpacingX} × nozzle = ${f3(o.bottomSpacingX * o.nozzle)} mm · flow ${o.bottomFlow} % · ${o.bottomSpeed} mm/s`,
     `; E: ${o.eMode === 'volumetric' ? 'volume (mm³)' : `virtual filament Ø${o.filDia} mm`} · flow ${o.flow} %`,
     `; Priming loops: ${o.skirtLoops} at ${o.skirtDist} mm · pre-fill ${o.preFill} mm`,
     `; Safe start: ${o.safeStartLen} mm at ${o.safeStartSpeed} mm/s · safe end: ${o.safeEndLen} mm at ${o.safeEndSpeed} mm/s to ${o.safeEndFlow} % flow`,

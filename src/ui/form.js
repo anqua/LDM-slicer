@@ -14,10 +14,13 @@ function fieldHTML(f) {
     input = `<select id="${id}">${f.opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>`;
   else if (f.type === 'text')
     input = `<input id="${id}" type="text">`;
-  else
-    input = `<div class="unit"><input id="${id}" type="number" step="${f.step ?? 'any'}"`
+  else {
+    // Room on the right for the unit label; longer units (e.g. "× nozzle") need more than the default.
+    const pad = f.unit && f.unit.length > 4 ? ` style="padding-right:${12 + f.unit.length * 7}px"` : '';
+    input = `<div class="unit"><input id="${id}" type="number" step="${f.step ?? 'any'}"${pad}`
       + `${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}>`
       + `${f.unit ? `<span>${f.unit}</span>` : ''}</div>`;
+  }
   return `<div class="row"><label for="${id}">${f.label}</label>${input}${help}</div>`;
 }
 

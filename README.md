@@ -71,7 +71,7 @@ Data flow: UI calls `update({...})` in `core/settings.js`. `main.js` listens wit
 
 - **Printer:** built for the Delta WASP 2040 Clay only: round bed with the origin at its center. Settings: bed diameter and height, nozzle (1.5–3 mm), extruder type, how E is interpreted (virtual filament or volume), firmware, start and end G-code.
 - **Print paths:** layer height, line width, spiral or layered mode, walls, infill pattern / angle / spacing / zig-zag width, seam, flow, retraction, speeds.
-- **Bottom layers** (independent of the infill above): number of layers, infill pattern (lines turning 90° per layer, grid, or concentric rings following the outline with a line-filled middle), angle, line spacing, flow multiplier and print speed. Walls on these layers keep the wall settings; layer 1 uses the first-layer speed.
+- **Bottom layers** (independent of the infill above): number of layers, infill pattern (lines turning 90° per layer, grid, or concentric rings following the outline with a line-filled middle), angle, line spacing (a multiple of the nozzle diameter), flow multiplier and print speed. Walls on these layers keep the wall settings; layer 1 uses the first-layer speed.
 - **Start of print / end of paths** (after Termite by Julian Jauk, TU Graz):
   - *Priming loops* around the part before it starts, and their distance.
   - *First layer height*, separate from the other layers.
