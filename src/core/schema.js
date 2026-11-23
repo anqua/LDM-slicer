@@ -37,10 +37,10 @@ export const SCHEMA = {
   ],
   paths: [
     { h: 'Layers' },
-    { k: 'layerH', label: 'Layer height', unit: 'mm', def: 0.7, step: 0.1,     // ≈60 % of the 1.2 mm WASP nozzle
+    { k: 'layerH', label: 'Layer height', unit: 'mm', def: 1.2, step: 0.1,     // 60 % of the 2 mm WASP nozzle
       help: 'Typically 50–70 % of nozzle diameter for clay.' },
-    { k: 'lineW', label: 'Line width', unit: 'mm', def: 1.4, step: 0.1,        // ≈120 % of the 1.2 mm WASP nozzle
-      help: 'Typically 110–130 % of nozzle diameter.' },
+    { k: 'lineW', label: 'Line width', unit: 'mm', def: 2.4, step: 0.1,        // 120 % of the 2 mm WASP nozzle
+      help: 'Width of the bead on the print, across the line. Typically 110–130 % of the nozzle diameter, about twice the layer height.' },
     { k: 'mode', label: 'Path mode', type: 'select', def: 'layered',
       opts: [['layered', 'Layer by layer (standard)'], ['spiral', 'Spiral vase (continuous)']] },
     { k: 'printParts', label: 'Print', type: 'select', def: 'all',
