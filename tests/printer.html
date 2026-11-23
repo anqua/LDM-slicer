@@ -1,0 +1,19 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Printer model close-up</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<link rel="stylesheet" href="../css/theme.css">
+<style>body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><script type="module">
+import * as THREE from 'three';
+import { createPrinterModel } from '../src/viewer/printer-model.js';
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x000000);
+scene.add(new THREE.AmbientLight(0xffffff, 0.8)); const dl = new THREE.DirectionalLight(0xffffff, 1.2); dl.position.set(200, -300, 400); scene.add(dl);
+const pm = createPrinterModel(scene); pm.setVisible(true); pm.rebuild();
+const q = new URLSearchParams(location.search), n = k => +q.get(k);
+pm.setHead(n('x') || 0, n('y') || 0, n('z') || 60);
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); document.body.append(r.domElement);
+const cam = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 1, 5000); cam.up.set(0, 0, 1);
+const t = [n('tx') || 0, n('ty') || 0, n('tz') || 80];
+cam.position.set(t[0] + (n('cx') || 150), t[1] + (n('cy') || -250), t[2] + (n('cz') || 120)); cam.lookAt(...t);
+r.render(scene, cam); window.__done = true;
+</script></body></html>

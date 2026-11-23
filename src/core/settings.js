@@ -64,6 +64,9 @@ export function save() {
 
 /** Apply a patch, persist, and notify listeners with the list of keys in the patch. */
 export function update(patch) {
+  // "Infill only" needs layers, the helix has no infill: choosing one switches the other away.
+  if (patch.printParts === "infill" && (patch.mode ?? S.mode) === "spiral") patch = { ...patch, mode: "layered" };
+  else if (patch.mode === "spiral" && (patch.printParts ?? S.printParts) === "infill") patch = { ...patch, printParts: "all" };
   Object.assign(S, patch);
   save();
   const keys = Object.keys(patch);

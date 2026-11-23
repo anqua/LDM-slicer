@@ -121,24 +121,24 @@ export function createPrinterModel(scene) {
     const pose = (x, y, tipZ) => {
       const ez = tipZ + effT / 2 + NOZZLE_H;
       head.position.set(x, y, ez);
+      const ea = ez + effT / 2 + ROD_R;                              // where the arms end: just above the plate's top face
       for (const t of towers) {
         const ex = x + effApothem * Math.cos(t.a), ey = y + effApothem * Math.sin(t.a);
         const kx = cx + jointR * Math.cos(t.a), ky = cy + jointR * Math.sin(t.a);
         const d = Math.hypot(kx - ex, ky - ey);
-        const carZ = Math.min(ez + Math.sqrt(Math.max(armL ** 2 - d ** 2, 400)), z1 - carH / 2);
+        const carZ = Math.min(ea + Math.sqrt(Math.max(armL ** 2 - d ** 2, 400)), z1 - carH / 2);
         t.car.position.set(cx + carR * Math.cos(t.a), cy + carR * Math.sin(t.a), carZ);
         t.arms.forEach((arm, i) => {
           const s = i ? -1 : 1;
-          e.set(ex, ey, ez).addScaledVector(t.side, s);
+          e.set(ex, ey, ea).addScaledVector(t.side, s);
           k.set(kx, ky, carZ).addScaledVector(t.side, s);
-          // A flat rod end meets a slanted face and its rim would dig in by r·sin φ (φ = angle between the rod
-          // and the face normal; both faces are vertical, facing along ±(cos a, sin a)). Back each end off by
-          // r·tan φ so the rim just touches the face: parts touch, none overlap.
+          // Carriage end: a flat rod end meets the carriage's vertical face and its rim would dig in by r·sin φ
+          // (φ = angle between the rod and the face normal, facing along ±(cos a, sin a)). Back it off by r·tan φ
+          // so the rim just touches the face. The effector end sits above the plate's top face (ea), where the
+          // rod cannot reach into the plate however steep it is (a steep rod beside a vertical face would).
           axis.subVectors(e, k).normalize();                             // carriage -> effector
           const c = Math.max(0.2, -(axis.x * Math.cos(t.a) + axis.y * Math.sin(t.a)));   // cos φ
-          const back = ROD_R * Math.sqrt(1 - c * c) / c;
-          e.addScaledVector(axis, -back);
-          k.addScaledVector(axis, back);
+          k.addScaledVector(axis, ROD_R * Math.sqrt(1 - c * c) / c);
           setRod(arm, e, k);
         });
       }

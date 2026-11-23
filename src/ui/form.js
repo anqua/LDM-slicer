@@ -35,7 +35,7 @@ function applyDeps() {
   for (const row of document.querySelectorAll("[data-off]")) {
     const off = row.dataset.offvals.split(",").includes(String(S[row.dataset.off]));
     row.classList.toggle("off", off);
-    row.title = off ? "Not used with the current Print setting" : "";
+    row.title = off ? "Not used with the current settings" : "";
     row.querySelectorAll("input,select,textarea").forEach(e => { e.disabled = off; });
   }
 }
