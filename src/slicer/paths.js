@@ -207,6 +207,9 @@ export function buildToolpaths(sliced, o) {
       if (k) s += Math.hypot(p[0] - ring[k - 1][0], p[1] - ring[k - 1][1]);
       return [p[0], p[1], z0 + (sl.z - z0) * (L ? s / L : 1)];
     });
+    // A joined turn starts exactly where the previous one ended. The nearest vertex of the new outline can be a
+    // few mm away, and without this point that step is missing from the preview (a visible break in the line).
+    if (spiralStarted && pos) pts.unshift([pos[0], pos[1], pos[2]]);
     out.paths.push({ type: 'spiral', pts, h: sl.h, join: spiralStarted });
     spiralStarted = true;
     pos = pts.at(-1);
