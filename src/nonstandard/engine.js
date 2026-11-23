@@ -140,7 +140,7 @@ export function buildNonStandard(pos, o, top) {
   // Curved layers: measure the part in layer space.
   let mesh = pos, warp = null, topL = top;
   if (style === 'curved') {
-    warp = makeWarp(o, rmax);
+    warp = makeWarp(o, rmax, top);
     ({ mesh, top: topL } = warpMesh(pos, warp, o.npType === 'cone' ? 80 : o.npLen));
   }
 
@@ -239,7 +239,7 @@ export function buildNonStandard(pos, o, top) {
   }
 
   // Travel moves to or from the wall lift by the height of the texture (the flat base needs no extra lift).
-  const hop = style === 'curved' ? 2 * o.npAmp + 1 : style === 'ruffle' ? 2 * (a + Math.abs(b)) + 1 : 2 * loopZ + 1;
+  const hop = style === 'curved' ? 2 * warp.A + 1 : style === 'ruffle' ? 2 * (a + Math.abs(b)) + 1 : 2 * loopZ + 1;
   let firstWall = true;                                // the helix starts at the top of the flat base: no lift needed to reach it
   for (const l of out) for (const p of l.paths) if (p.type === 'spiral') { p.hop = firstWall ? 0 : hop; firstWall = false; }
 
@@ -262,6 +262,17 @@ export function buildNonStandard(pos, o, top) {
   if (style === 'ruffle') {
     const slope = Math.atan(a * TAU / lam) * 180 / Math.PI;
     if (slope > 40) warnings.push(`The ruffled wall climbs at up to ${slope.toFixed(0)}°, which clay may not hold and the nozzle body may touch. Lower the wave height or lengthen the wavelength.`);
+  }
+  if (warp && warp.reduced) warnings.push(`The model is short for this wave: amplitude reduced to ${warp.A.toFixed(1)} mm (the wave ramps in and out over 3 × amplitude, above the flat base and below the top).`);
+  if (warp) {                                          // how far the wall leans out over the one below, in real space
+    let n = 0, over = 0, worst = 0;
+    for (let i = Math.max(1, bottomN); i < nL; i++) for (let j = 0; j < N; j += 16) {
+      const A = walls[i][j], B = walls[i - 1][j];
+      const dz = warp.toWorld(A[0], A[1], layers[i].z) - warp.toWorld(B[0], B[1], layers[i - 1].z);
+      const ang = Math.atan2(Math.hypot(A[0] - B[0], A[1] - B[1]), Math.max(dz, 0.01)) * 180 / Math.PI;
+      n++; if (ang > 40) over++; if (ang > worst) worst = ang;
+    }
+    if (over / n > 0.05) warnings.push(`${(100 * over / n).toFixed(0)} % of the wall leans more than 40° over the layer below (up to ${worst.toFixed(0)}°): the clay may sag. Lower the amplitude or lengthen the wavelength.`);
   }
   if (zMax > o.bedZ) warnings.push(`The print reaches Z ${zMax.toFixed(0)} mm, above the ${o.bedZ} mm build height.`);
   if (style === 'loops' && o.lpSpacing > 5.5 * loopR) warnings.push(`Loop spacing reduced to ${(5.5 * loopR).toFixed(1)} mm so the path forms loops at this size.`);

@@ -12,18 +12,22 @@
 const smooth = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
 /** The warp for settings `o`; `rmax` = largest distance of the model from the axis (cone only). */
-export function makeWarp(o, rmax = 100) {
-  const A = o.npAmp, lam = Math.max(1, o.npLen);
+export function makeWarp(o, rmax = 100, top = Infinity) {
+  const z0 = Math.max(0, o.npBase);
+  // The effect ramps in above the flat base and back out below the top, so the rim is flat and the last layers
+  // are not cut into short sideways arcs. Both ramps are 3·A tall; on a short model A is reduced to fit.
+  const fitA = Number.isFinite(top) ? Math.max(0.1, (top - z0) / 6) : Infinity;
+  const A = Math.min(o.npAmp, fitA), lam = Math.max(1, o.npLen);
   const th = (o.npAngle || 0) * Math.PI / 180, cx = Math.cos(th), cy = Math.sin(th);
   const k = 2 * Math.PI / lam;
   const g = o.npType === 'ripple' ? (x, y) => Math.sin(k * Math.hypot(x, y))
     : o.npType === 'cone' ? (x, y) => 1 - Math.min(1, Math.hypot(x, y) / Math.max(1, rmax))
     : (x, y) => Math.sin(k * (x * cx + y * cy));
-  const z0 = Math.max(0, o.npBase), ramp = Math.max(3 * A, 1e-6);
-  const w = zp => smooth((zp - z0) / ramp);
+  const ramp = Math.max(3 * A, 1e-6);
+  const w = zp => smooth((zp - z0) / ramp) * (1 - smooth((zp - (top - ramp)) / ramp));   // 0 at the base and at the top
   const maxSlope = o.npType === 'cone' ? A / Math.max(1, rmax) : A * k;      // steepest rise per mm
   return {
-    A, z0, ramp, maxSlope,
+    A, z0, ramp, maxSlope, reduced: A < o.npAmp,
     /** actual height of the point (x, y) on the layer surface of nominal height zp */
     toWorld: (x, y, zp) => zp + A * g(x, y) * w(zp),
     /** local layer spacing at (x, y), relative to the nominal layer height `rise` (= dz_world / dz_layer) */

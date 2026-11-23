@@ -49,12 +49,13 @@ export function createToolpathView(scene) {
       closeLayersUpTo(Math.min(m.layer, nLayers - 1));
       t += m.dt;
       t1[n] = t; kind[n] = m.extrude ? 1 : 0; segs[n] = pos.length / 6; travs[n] = tpos.length / 6; layer[n] = li;
-      P.set(m.a, n * 6); P.set(m.b, n * 6 + 3);
+      const A = m.a, B = m.b;                           // points may carry extra values after x, y, z (layer spacing)
+      P[n * 6] = A[0]; P[n * 6 + 1] = A[1]; P[n * 6 + 2] = A[2]; P[n * 6 + 3] = B[0]; P[n * 6 + 4] = B[1]; P[n * 6 + 5] = B[2];
       if (m.extrude) {
         const c = colors[m.type] ?? colors.outer;
-        pos.push(...m.a, ...m.b);
+        pos.push(A[0], A[1], A[2], B[0], B[1], B[2]);
         col.push(c.r, c.g, c.b, c.r, c.g, c.b);
-      } else tpos.push(...m.a, ...m.b);
+      } else tpos.push(A[0], A[1], A[2], B[0], B[1], B[2]);
     });
     while (layerEndTime.length < nLayers) layerEndTime.push(t);
     while (layerStart.length < nLayers) layerStart.push(pos.length / 3);
