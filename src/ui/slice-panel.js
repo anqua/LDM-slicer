@@ -35,6 +35,7 @@ export function initSlicePanel(actions) {
   exportBtn.addEventListener('click', actions.exportGcode);
   const modelSw = bindSwitch($('showModel'), false, actions.setShowModel);
   bindSwitch($('showTravel'), false, actions.setShowTravel);
+  bindSwitch($('showExact'), !!actions.exact, actions.setExact);
   playBtn.addEventListener('click', actions.togglePlay);
   speed.addEventListener('change', () => actions.setSpeed(+speed.value));
 
@@ -68,6 +69,8 @@ export function initSlicePanel(actions) {
       npBtn.textContent = v ? 'Slicing…' : 'Slice ▾';
       npBtn.disabled = v;
     },
+    /** Total print time (s) shown next to the clock, when the preview is redrawn. */
+    setTotal(d) { total = d; },
     get speed() { return +speed.value; },
 
     /** Show a finished slice. `duration`: simulated print time in s. */

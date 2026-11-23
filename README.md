@@ -13,6 +13,7 @@ Being built step by step.
 - [x] **Step 1 – Workspace:** 3D view of the model on a bed sized to your printer. Load an STL (or the demo vase), scale, rotate, offset, scale to fit the bed, and see a warning when it doesn't fit. Includes menus for printer details and print-path settings, saved in the browser, with JSON export and import.
 - [x] **Step 2 – Slicing:** cut the mesh into layers, with spiral-vase and layer-by-layer modes, walls, solid bottom and priming loops (skirt). Holes in the mesh up to 8 mm are closed automatically, and the slice summary warns that the model needs repair.
 - [x] **Step 3 – Toolpath preview:** paths colored by type, a layer slider (arrow keys step through layers), optional travel moves and model overlay. **Play** (or Space) simulates the print at 10×, 20× or 30× speed: the paths grow move by move and the printer head follows the nozzle. On the delta printer, the carriages and arms move with it.
+- [x] **Exact G-code preview:** the *Exact G-code* switch in the preview bar replays the exported G-code itself instead of the slicer's paths: every move as written (rounded coordinates, lifts, the approach from home and the lift at the end), timed with the file's feed rates (`viewer/gcode-moves.js`). The choice is saved. G-code now marks `;LAYER` inside a continuous spiral too.
 - [x] **Step 4 – G-code export:** E values, speeds, min layer time, start and end G-code, plus clay-specific start and end handling modeled on [Termite](https://www.food4rhino.com/en/app/termite): first layer height, pre-fill, safe start and safe end.
 
 - [x] **Infill** (layer-by-layer mode): zig-zag between the walls and an extra inner wall, lines, grid, and triply periodic minimal surfaces, with adjustable spacing / cell size. A preview of the chosen pattern shows under the dropdown.
@@ -53,6 +54,7 @@ src/
     camera-rig.js       perspective/orthographic cameras + OrbitControls, framing
     bed.js              build plate, grid, build-volume outline, bed extents
     toolpath.js         toolpath preview, drawn up to the chosen layer
+    gcode-moves.js      reads G-code text back into moves for the exact preview
   model/
     model.js            loaded model: rotation, scale/offset placement, fit check
     loader.js           STL reading

@@ -19,7 +19,7 @@ function chains(layers) {
   const out = [];
   layers.forEach((l, li) => {
     for (const p of l.paths) {
-      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h * (q[3] ?? 1), speed: p.speed, fm: p.flow ?? 1 }));   // q[3]: local layer spacing, relative
+      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h * (q[3] ?? 1), speed: p.speed, fm: p.flow ?? 1, li }));   // q[3]: local layer spacing, relative; li: layer of this point
       const last = out.at(-1);
       if (p.join && last) last.pts.push(...pts.slice(1));
       else out.push({ type: p.type, layer: li, pts, xyVol: !!p.xyVol, hop: p.hop ?? 0 });
@@ -51,7 +51,7 @@ function shape(pts, o) {
     while (i < cum.length - 1 && cum[i] < d) i++;
     const t = cum[i] === cum[i - 1] ? 0 : (d - cum[i - 1]) / (cum[i] - cum[i - 1]);
     const p = pts[i - 1], q = pts[i];
-    return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t, h: q.h, speed: q.speed, fm: q.fm };
+    return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t, h: q.h, speed: q.speed, fm: q.fm, li: q.li };
   };
 
   const moves = [];
@@ -133,6 +133,11 @@ export function toGcode(tp, o, meta = {}) {
     primed = true;
 
     for (const m of shape(c.pts, o)) {
+      if (m.li !== lastLayer) {                   // a continuous spiral crosses layers inside one chain: mark each
+        const l = tp.layers[m.li];
+        body.push(`;LAYER:${m.li} Z${f3(l.z)} H${f3(l.h)}`);
+        lastLayer = m.li;
+      }
       // xyVol paths (non-standard, inclined walls): clay per mm of horizontal advance, because the layers stay one
       // layer height apart vertically, so a bead on a slope is longer but thinner.
       const vlen = c.xyVol ? Math.hypot(m.x - pos.x, m.y - pos.y) : m.len;

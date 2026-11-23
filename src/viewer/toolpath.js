@@ -1,7 +1,9 @@
 // Toolpath preview: extrusion lines colored by type, optional travel moves, and a print
 // simulation that grows the paths move by move along a time line.
+// Two sources: the slicer's paths (set), or the exported G-code replayed move by move (setFromGcode).
 import * as THREE from 'three';
 import { cssVar } from '../core/theme.js';
+import { parseGcodeMoves } from './gcode-moves.js';
 
 const TYPE_TOKEN = { skirt: 'path-skirt', outer: 'path-outer', inner: 'path-inner', bottom: 'path-bottom', infill: 'path-infill', spiral: 'path-outer' };
 
@@ -27,46 +29,37 @@ export function createToolpathView(scene) {
   }
 
   /**
-   * Build the preview from buildToolpaths() output.
-   * @param o settings: travelSpeed (mm/s)
+   * Build the preview from a move list in print order: { a, b, extrude, type, layer, dt }.
+   * @param nLayers number of layers (the slider's range): layers without moves are kept, empty
    */
-  function set(tp, o) {
+  function build(moves, nLayers) {
     clear();
     const pos = [], col = [], tpos = [];
     const colors = Object.fromEntries(Object.entries(TYPE_TOKEN).map(([k, t]) => [k, new THREE.Color(cssVar(t))]));
-
-    let count = 0;
-    for (const l of tp.layers) for (const p of l.paths) count += p.pts.length;   // upper bound on moves
+    const count = moves.length;
     const t1 = new Float64Array(count), kind = new Uint8Array(count), segs = new Uint32Array(count),
       travs = new Uint32Array(count), layer = new Uint32Array(count), P = new Float32Array(count * 6);
-    let n = 0, t = 0, last = null;
-    const push = (a, b, k, dt, li) => {
-      t += dt;
-      t1[n] = t; kind[n] = k; segs[n] = pos.length / 6; travs[n] = tpos.length / 6; layer[n] = li;
-      P.set(a, n * 6); P.set(b, n * 6 + 3);
-      n++;
+    let t = 0, li = 0;
+    const closeLayersUpTo = target => {                  // layers up to `target - 1` are finished
+      while (li < target && li < nLayers) { layerEndTime.push(t); li++; layerStart.push(pos.length / 3); }
     };
+    layerStart.push(0);
 
-    tp.layers.forEach((l, li) => {
-      layerStart.push(pos.length / 3);
-      for (const p of l.paths) {
-        const c = colors[p.type] ?? colors.outer;
-        if (last && !p.join) {
-          const d = Math.hypot(p.pts[0][0] - last[0], p.pts[0][1] - last[1], p.pts[0][2] - last[2]);
-          if (d > 1e-6) { push(last, p.pts[0], 0, d / o.travelSpeed, li); tpos.push(...last, ...p.pts[0]); }
-        }
-        for (let i = 1; i < p.pts.length; i++) {
-          const a = p.pts[i - 1], b = p.pts[i];
-          push(a, b, 1, Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / p.speed, li);
-          pos.push(...a, ...b);
-          col.push(c.r, c.g, c.b, c.r, c.g, c.b);
-        }
-        last = p.pts.at(-1);
-      }
-      layerEndTime.push(t);
+    moves.forEach((m, n) => {
+      closeLayersUpTo(Math.min(m.layer, nLayers - 1));
+      t += m.dt;
+      t1[n] = t; kind[n] = m.extrude ? 1 : 0; segs[n] = pos.length / 6; travs[n] = tpos.length / 6; layer[n] = li;
+      P.set(m.a, n * 6); P.set(m.b, n * 6 + 3);
+      if (m.extrude) {
+        const c = colors[m.type] ?? colors.outer;
+        pos.push(...m.a, ...m.b);
+        col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+      } else tpos.push(...m.a, ...m.b);
     });
+    while (layerEndTime.length < nLayers) layerEndTime.push(t);
+    while (layerStart.length < nLayers) layerStart.push(pos.length / 3);
     mv = { t1, kind, segs, travs, layer, P };
-    nMoves = n; duration = t;
+    nMoves = count; duration = t;
 
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -91,6 +84,39 @@ export function createToolpathView(scene) {
     group.add(lines, travels, current, tip);
     group.visible = true;
     simulate(duration);
+  }
+
+  /**
+   * Build the preview from buildToolpaths() output: the slicer's own paths, with the travel between them
+   * implied (straight, at the travel speed).
+   * @param o settings: travelSpeed (mm/s)
+   */
+  function set(tp, o) {
+    const moves = [];
+    let last = null;
+    tp.layers.forEach((l, li) => {
+      for (const p of l.paths) {
+        if (last && !p.join) {
+          const d = Math.hypot(p.pts[0][0] - last[0], p.pts[0][1] - last[1], p.pts[0][2] - last[2]);
+          if (d > 1e-6) moves.push({ a: last, b: p.pts[0], extrude: false, layer: li, dt: d / o.travelSpeed });
+        }
+        for (let i = 1; i < p.pts.length; i++) {
+          const a = p.pts[i - 1], b = p.pts[i];
+          moves.push({ a, b, extrude: true, type: p.type, layer: li, dt: Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / p.speed });
+        }
+        last = p.pts.at(-1);
+      }
+    });
+    build(moves, tp.layers.length);
+  }
+
+  /**
+   * Build the preview from the exported G-code text itself: every move as written (rounded coordinates, the
+   * lifts and the approach, the lift at the end), timed with the feed rates in the file.
+   * @param home position G28 moves the nozzle to (a delta homes at the top, in the middle)
+   */
+  function setFromGcode(text, nLayers, home) {
+    build(parseGcodeMoves(text, home), nLayers);
   }
 
   /**
@@ -132,7 +158,7 @@ export function createToolpathView(scene) {
   function setShowTravel(v) { showTravel = v; if (travels) travels.visible = v; }
 
   return {
-    set, clear, simulate, setLayer, setShowTravel,
+    set, setFromGcode, clear, simulate, setLayer, setShowTravel,
     get active() { return !!lines; },
     get duration() { return duration; },
     /** Time (s) at which layer n (1-based) is finished. */

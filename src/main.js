@@ -42,6 +42,16 @@ const panel = initSlicePanel({
   },
   setShowModel: v => model.setVisible(v),
   setShowTravel: v => toolpath.setShowTravel(v),
+  exact: S.gcodeExact,
+  setExact(v) {                        // exact G-code view on/off: a view preference, the slice stays
+    S.gcodeExact = v; save();
+    if (!result) return;
+    const frac = toolpath.duration ? sim.t / toolpath.duration : 1;
+    setPlaying(false);
+    showPaths();
+    panel.setTotal(toolpath.duration);
+    showSim(frac * toolpath.duration);
+  },
   scrubLayer(n) { setPlaying(false); showSim(toolpath.layerEnd(n)); },
   togglePlay() {
     if (!toolpath.active) return;
@@ -76,6 +86,12 @@ onFrame(dt => {
   showSim(Math.min(t, toolpath.duration));
 });
 
+/** Draw the current slice: from the exported G-code itself (exact) or from the slicer paths. */
+function showPaths() {
+  if (S.gcodeExact) toolpath.setFromGcode(result.gcode.text, result.tp.layers.length, [0, 0, S.bedZ]);
+  else toolpath.set(result.tp, S);
+}
+
 function runSlice(nonplanar = false) {
   nonplanar = nonplanar === true;      // also called from the S key and click events
   const pos = model.positions();
@@ -99,7 +115,7 @@ function runSlice(nonplanar = false) {
       const gcode = toGcode(tp, o, { modelName: model.name(), note });
       result = { tp, gcode };
       setPlaying(false);
-      toolpath.set(tp, S);
+      showPaths();
       model.setVisible(false);
       panel.show(tp, gcode.stats, S, toolpath.duration);
       showSim(toolpath.duration);
