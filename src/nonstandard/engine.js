@@ -238,6 +238,11 @@ export function buildNonStandard(pos, o, top) {
     if (!out[i].paths.length) continues = false;
   }
 
+  // Travel moves to or from the wall lift by the height of the texture (the flat base needs no extra lift).
+  const hop = style === 'curved' ? 2 * o.npAmp + 1 : style === 'ruffle' ? 2 * (a + Math.abs(b)) + 1 : 2 * loopZ + 1;
+  let firstWall = true;                                // the helix starts at the top of the flat base: no lift needed to reach it
+  for (const l of out) for (const p of l.paths) if (p.type === 'spiral') { p.hop = firstWall ? 0 : hop; firstWall = false; }
+
   // Speeds (first layer, bottom, normal; capped by the machine) and the bottom flow multiplier.
   const bottomFlow = (o.bottomFlow ?? 75) / 100;
   out.forEach((l, i) => {
@@ -267,6 +272,5 @@ export function buildNonStandard(pos, o, top) {
     ruffle: `ruffled wall: amplitude ${o.rfAmp} mm, wavelength ${o.rfLen} mm, in/out ${o.rfRadial} mm, flat base ${o.npBase} mm`,
     loops: `loop texture: loop Ø ${o.lpSize} mm, spacing ${o.lpSpacing} mm, from ${o.lpFrom} % to ${o.lpTo} % of the height`,
   };
-  const hop = style === 'curved' ? 2 * o.npAmp + 1 : style === 'ruffle' ? 2 * (a + Math.abs(b)) + 1 : 2 * loopZ + 1;
   return { tp: { layers: out, warnings }, zMax, hop, note: `Non-standard slice, ${notes[style]}` };
 }

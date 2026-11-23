@@ -22,7 +22,7 @@ function chains(layers) {
       const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h * (q[3] ?? 1), speed: p.speed, fm: p.flow ?? 1 }));   // q[3]: local layer spacing, relative
       const last = out.at(-1);
       if (p.join && last) last.pts.push(...pts.slice(1));
-      else out.push({ type: p.type, layer: li, pts, xyVol: !!p.xyVol });
+      else out.push({ type: p.type, layer: li, pts, xyVol: !!p.xyVol, hop: p.hop ?? 0 });
     }
   });
   return out;
@@ -84,22 +84,24 @@ export function toGcode(tp, o, meta = {}) {
   const body = [];
   const st = { time: 0, volume: 0, extrudeLen: 0, travelLen: 0, layers: tp.layers.filter(l => l.paths.length).length };
 
-  let pos = null, lastF = null, lastLayer = -1, primed = false;
+  let pos = null, lastF = null, lastLayer = -1, primed = false, prevHop = 0;
   const g1 = (parts, F) => {
     if (F !== lastF) { parts.push('F' + F); lastF = F; }
     body.push('G1 ' + parts.join(' '));
   };
-  const travel = (x, y, z) => {
+  // hop: extra lift for this move (non-standard walls with a texture), on top of the Z-hop setting.
+  const travel = (x, y, z, hop = 0) => {
+    const zh = Math.max(o.zhop, hop);
     const d = pos ? Math.hypot(x - pos.x, y - pos.y) : 0;
     if (!pos) {
-      body.push(`G0 Z${f3(z + Math.max(5, o.zhop))} F${travelF}`, `G0 X${f3(x)} Y${f3(y)}`, `G0 Z${f3(z)}`);
+      body.push(`G0 Z${f3(z + Math.max(5, zh))} F${travelF}`, `G0 X${f3(x)} Y${f3(y)}`, `G0 Z${f3(z)}`);
       lastF = travelF;
     } else if (d > 1e-3 || Math.abs(z - pos.z) > 1e-4) {
       const far = d > o.lineW * 2;
       if (far && o.retract > 0) body.push(`G1 E-${f5(o.retract)} F1200 ; retract`);
-      if (far && o.zhop > 0) body.push(`G0 Z${f3(Math.max(z, pos.z) + o.zhop)} F${travelF}`);
-      body.push(`G0 X${f3(x)} Y${f3(y)}` + (far && o.zhop > 0 ? '' : ` Z${f3(z)}`) + ` F${travelF}`);
-      if (far && o.zhop > 0) body.push(`G0 Z${f3(z)}`);
+      if (far && zh > 0) body.push(`G0 Z${f3(Math.max(z, pos.z) + zh)} F${travelF}`);
+      body.push(`G0 X${f3(x)} Y${f3(y)}` + (far && zh > 0 ? '' : ` Z${f3(z)}`) + ` F${travelF}`);
+      if (far && zh > 0) body.push(`G0 Z${f3(z)}`);
       if (far && o.retract > 0) body.push(`G1 E${f5(o.retract)} F1200 ; unretract`);
       lastF = null;
       st.travelLen += d;
@@ -117,7 +119,8 @@ export function toGcode(tp, o, meta = {}) {
     }
     body.push(`;TYPE:${c.type}`);
     const p0 = c.pts[0];
-    travel(p0.x, p0.y, p0.z);
+    travel(p0.x, p0.y, p0.z, Math.max(c.hop, prevHop));
+    prevHop = c.hop;
 
     // Pre-fill: push clay in place once, before the very first path, to build pressure.
     if (!primed && o.preFill > 0) {

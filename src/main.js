@@ -88,8 +88,8 @@ function runSlice(nonplanar = false) {
       if (nonplanar) {
         const r = buildNonStandard(pos, S, model.bounds().max.z);
         tp = r.tp;
-        // Travel moves are straight in xy at the higher end point + hop: lift by the full texture height.
-        o = { ...S, zhop: Math.max(S.zhop, r.hop) };
+        // The G-code writer lifts travel moves to and from the textured wall (path.hop); the base is not lifted.
+        o = S;
         note = `${r.note} · Z up to ${r.zMax.toFixed(1)} mm`;
       } else {
         const top = model.bounds().max.z;
