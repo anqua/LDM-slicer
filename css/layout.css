@@ -97,3 +97,10 @@ main{position:relative;overflow:hidden}
   .menu-grid{grid-template-columns:1fr 1fr}
   .side-resize{display:none}
 }
+
+/* Scrollbars in the theme: dark track, grey thumb, green on hover (the system ones are bright white). */
+*{scrollbar-width:thin;scrollbar-color:#444 #000}
+::-webkit-scrollbar{width:10px;height:10px;background:#000}
+::-webkit-scrollbar-thumb{background:#444;border-radius:5px;border:2px solid #000}
+::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+::-webkit-scrollbar-corner{background:#000}

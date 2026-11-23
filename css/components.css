@@ -70,3 +70,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .grp.open>.grp-h::before{content:"▾"}
 .grp-h:hover{color:var(--accent)}
 .grp:not(.open)>.grp-body{display:none}
+
+/* A setting that has no effect right now (Print = infill only): greyed out, not clickable. Opaque, no fading. */
+.row.off label,.row.off small{color:var(--muted)}
+.row.off input,.row.off select{color:var(--muted);border-style:dashed;cursor:not-allowed;background:var(--bg)}
+.row.off .unit span{color:var(--line)}
+
+/* Rows with a dropdown give the dropdown more room, so option names are not cut off. */
+.row:has(select){grid-template-columns:minmax(0,2fr) minmax(0,3fr)}
+.row.stack{grid-template-columns:minmax(0,1fr)}

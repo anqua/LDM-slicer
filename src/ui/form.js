@@ -21,14 +21,22 @@ function fieldHTML(f) {
       + `${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}>`
       + `${f.unit ? `<span>${f.unit}</span>` : ''}</div>`;
   }
-  const dep = f.dep ? ` data-dep="${f.dep[0]}" data-vals="${f.dep[1].join(',')}"` : '';
-  return `<div class="row"${dep}><label for="${id}">${f.label}</label>${input}${help}</div>`;
+  const dep = (f.dep ? ` data-dep="${f.dep[0]}" data-vals="${f.dep[1].join(",")}"` : "")
+    + (f.off ? ` data-off="${f.off[0]}" data-offvals="${f.off[1].join(",")}"` : "");
+  const stack = f.type === "select" && f.opts.some(([, t]) => t.length > 16) ? " stack" : "";   // long option names: the dropdown gets the full width under its label
+  return `<div class="row${stack}"${dep}><label for="${id}">${f.label}</label>${input}${help}</div>`;
 }
 
-/** Show a row only while the setting it depends on has one of its values. */
+/** Show a row only while the setting it depends on has one of its values; grey out and disable a row while a setting makes it moot. */
 function applyDeps() {
   for (const row of document.querySelectorAll('[data-dep]'))
     row.hidden = !row.dataset.vals.split(',').includes(String(S[row.dataset.dep]));
+  for (const row of document.querySelectorAll("[data-off]")) {
+    const off = row.dataset.offvals.split(",").includes(String(S[row.dataset.off]));
+    row.classList.toggle("off", off);
+    row.title = off ? "Not used with the current Print setting" : "";
+    row.querySelectorAll("input,select,textarea").forEach(e => { e.disabled = off; });
+  }
 }
 
 // Sections: every heading in a pane opens and closes its own group of settings. The first group of a pane starts

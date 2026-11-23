@@ -4,6 +4,7 @@ import { TPMS } from '../slicer/infill.js';
 // Printer `def` values are generic fallbacks; the default preset (core/printers.js) overrides them.
 // Field: { k, label, def, type?: 'num'|'select'|'text'|'area', unit?, step?, min?, max?, opts?, help? }
 // min/max: numeric bounds, enforced by the form (clamp) and on load (out-of-range saved values reset to default).
+// off: [key, values]: the row is greyed out and disabled while that setting has one of these values (it has no effect then).
 // Heading: { h }
 export const SCHEMA = {
   printer: [
@@ -41,14 +42,14 @@ export const SCHEMA = {
       help: 'Typically 50–70 % of nozzle diameter for clay.' },
     { k: 'lineW', label: 'Line width', unit: 'mm', def: 2.4, step: 0.1,        // 120 % of the 2 mm WASP nozzle
       help: 'Width of the bead on the print, across the line. Typically 110–130 % of the nozzle diameter, about twice the layer height.' },
-    { k: 'mode', label: 'Path mode', type: 'select', def: 'layered',
-      opts: [['layered', 'Layer by layer (standard)'], ['spiral', 'Spiral vase (continuous)']] },
+    { k: 'mode', label: 'Path mode', type: 'select', def: 'layered', off: ['printParts', ['infill']],
+      opts: [['layered', 'Layer by layer'], ['spiral', 'Spiral vase']] },
     { k: 'printParts', label: 'Print', type: 'select', def: 'all',
-      opts: [['all', 'Walls and infill'], ['infill', 'Infill only (no walls)']],
+      opts: [['all', 'Walls and infill'], ['infill', 'Infill only']],
       help: 'Infill only prints the infill and the bottom layers, without the outer walls; the infill then reaches the outline. Layer by layer only, and it needs an infill pattern.' },
     { h: 'Walls' },
-    { k: 'walls', label: 'Wall count', def: 1, step: 1, help: 'Spiral mode always uses 1 wall.' },
-    { k: 'wallOrder', label: 'Wall order', type: 'select', def: 'outer',
+    { k: 'walls', label: 'Wall count', def: 1, step: 1, off: ['printParts', ['infill']], help: 'Spiral mode always uses 1 wall. Not used with Infill only.' },
+    { k: 'wallOrder', label: 'Wall order', type: 'select', def: 'outer', off: ['printParts', ['infill']],
       opts: [['outer', 'Outer first'], ['inner', 'Inner first']] },
     // Bottom layers: the infill inside the walls of the first N layers, controlled independently of
     // the infill above. Walls on these layers keep the wall settings.
@@ -77,7 +78,7 @@ export const SCHEMA = {
       help: 'Line distance for lines / grid, wave length for zig-zag, cell size (one repeat of the pattern) for the minimal surfaces.' },
     { k: 'zigzagWidth', label: 'Zig-zag width', unit: 'mm', def: 15,
       help: 'Zig-zag only: distance from the walls to an extra inner wall, with the zig-zag in between.' },
-    { k: 'seam', label: 'Seam position', type: 'select', def: 'rear',
+    { k: 'seam', label: 'Seam position', type: 'select', def: 'rear', off: ['printParts', ['infill']],
       opts: [['rear', 'Aligned at rear'], ['nearest', 'Nearest point'], ['random', 'Random']] },
     { h: 'Extrusion' },
     { k: 'flow', label: 'Flow', unit: '%', def: 100 },
@@ -111,7 +112,7 @@ export const SCHEMA = {
     // is only shown while that setting has one of these values.
     { h: 'Non-standard slice' },
     { k: 'npMode', label: 'Style', type: 'select', def: 'curved',
-      opts: [['curved', 'Curved layers (non-planar)'], ['ruffle', 'Ruffled wall'], ['loops', 'Loop texture'], ['zones', 'Zones (Slice menu)']],
+      opts: [['curved', 'Curved layers'], ['ruffle', 'Ruffled wall'], ['loops', 'Loop texture'], ['zones', 'Zones']],
       help: 'Also chosen from the Slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: the wall waves up and down and in and out as it goes round. Loop texture: the wall path curls into small loops between two heights.' },
     { k: 'npType', label: 'Layer shape', type: 'select', def: 'wave', dep: ['npMode', ['curved']],
       opts: [['wave', 'Wave (sine across the part)'], ['ripple', 'Ripple (rings from the center)'], ['cone', 'Cone (center higher)']],
