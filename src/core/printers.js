@@ -6,14 +6,13 @@
 export const DEFAULT_PRINTER = 'wasp2040';
 
 export const PRINTERS = {
+  // Delta WASP 2040 Clay: Ø200 × 400 mm build volume, 2 mm LDM nozzle (1.2 mm also shipped), 3 L tank,
+  // 150 mm/s print and travel, 500 mm/s², min layer 0.5 mm; firmware is WASP's own (Marlin-based, unverified).
   // Sources (retailer / lab listings; no WASP datasheet found):
   //   https://daemon3dprint.com/main/delta-wasp-20-40-clay.html
   //   https://burg-halle.de/en/university/facilities/burglabs/biolab/infrastructure-biolab/3d-printer
   wasp2040: {
     name: 'Delta WASP 2040 Clay',
-    notes: 'Ø200 × 400 mm build volume · 2 mm LDM nozzle (1.2 mm also shipped, below the supported 1.5–3 mm) · 3 L tank · '
-      + '150 mm/s print and travel · 500 mm/s² · min layer 0.5 mm. Firmware is WASP\'s own '
-      + '(Marlin-based, unverified).',
     values: {
       printerName: 'Delta WASP 2040 Clay',
       bedX: 200, bedZ: 400,
@@ -26,10 +25,3 @@ export const PRINTERS = {
     frame: { footprint: 490, height: 870, below: 120 },
   },
 };
-
-/** Keys whose current value differs from the preset. */
-export function presetDiff(id, s) {
-  const p = PRINTERS[id];
-  if (!p) return [];
-  return Object.entries(p.values).filter(([k, v]) => s[k] !== v).map(([k]) => k);
-}

@@ -1,13 +1,11 @@
 // Sidebar: tabs plus the Model, Printer and Print-paths panes.
 import { SCHEMA } from '../core/schema.js';
 import { S, update, onChange, exportSettings, importSettings, resetSettings } from '../core/settings.js';
-import { PRINTERS, presetDiff } from '../core/printers.js';
+import { PRINTERS } from '../core/printers.js';
 import { renderFields } from './form.js';
 import { initInfillPreview } from './infill-preview.js';
 
-const LABELS = Object.fromEntries(Object.values(SCHEMA).flat().filter(f => f.k).map(f => [f.k, f.label]));
-
-/** Preset dropdown + description; shows which preset fields were edited afterwards. */
+/** Preset dropdown. With a preset selected nothing else is shown; "Custom" gets a one-line hint. */
 function initPresetPicker() {
   const sel = $('printerPreset'), info = $('presetInfo');
   sel.innerHTML = `<option value="">Custom</option>`
@@ -16,10 +14,8 @@ function initPresetPicker() {
   const render = () => {
     const id = PRINTERS[S.printerPreset] ? S.printerPreset : '';
     sel.value = id;
-    if (!id) { info.textContent = 'Enter your printer\'s specifications below, or pick a preset.'; return; }
-    const p = PRINTERS[id], diff = presetDiff(id, S);
-    info.innerHTML = `<b>${p.name}</b><br>${p.notes}`
-      + (diff.length ? `<br><span class="warn">Changed from preset: ${diff.map(k => LABELS[k] ?? k).join(', ')}</span>` : '');
+    info.hidden = !!id;
+    if (!id) info.textContent = 'Enter your printer\'s specifications below, or pick a preset.';
   };
 
   sel.addEventListener('change', () => {
