@@ -19,6 +19,7 @@ export function createSlicing({ model, toolpath, panel, playback }) {
   /** Slice the loaded model. `nonStandard`: use the non-standard engine (S.npMode); otherwise the standard slicer. */
   function run(nonStandard = false) {
     nonStandard = nonStandard === true;                 // also called from the S key and click events
+    S.sliceKind = nonStandard ? "np" : "standard"; save();   // the Slice menu marks the way last used
     const pos = model.positions();
     if (!pos) return;
     if (!model.fits() && !confirm('The model is outside the build volume. Slice anyway?')) return;

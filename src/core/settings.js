@@ -11,7 +11,7 @@ const defaults = {};
 for (const group of Object.values(SCHEMA)) for (const f of group) if (f.k) defaults[f.k] = f.def;
 Object.assign(defaults, PRINTERS[DEFAULT_PRINTER].values, { printerPreset: DEFAULT_PRINTER });
 // View preferences. `printerVisible` replaces `showPrinter`, which was force-saved as false on every load.
-Object.assign(defaults, { printerVisible: true, gcodeExact: false, viewMode: "lines", zones: [] });
+Object.assign(defaults, { printerVisible: true, gcodeExact: false, viewMode: "lines", zones: [], sliceKind: "standard" });   // sliceKind: which kind of slice the Slice menu shows as chosen
 /** The default settings (schema + default printer), untouched by what the user saved. Tests and Reset use it. */
 export const DEFAULTS = Object.freeze(structuredClone({ ...defaults }));
 

@@ -56,7 +56,9 @@ export function initSliceMenu(run) {
   const grid = menu.querySelector('#menuGrid'), zonesView = menu.querySelector('#menuZones');
   const showView = v => { grid.hidden = v !== 'grid'; zonesView.hidden = v !== 'zones'; };
 
-  const mark = () => menu.querySelectorAll('.opt').forEach(b => b.classList.toggle('on', b.dataset.id === S.npMode));
+  // Marked: the standard way in use (layer by layer, or the helix) until a non-standard style is used.
+  const chosen = () => S.sliceKind === 'np' ? S.npMode : S.mode === 'spiral' ? 'helix' : 'layered';
+  const mark = () => menu.querySelectorAll('.opt').forEach(b => b.classList.toggle('on', b.dataset.id === chosen()));
   const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
   const place = () => menu.style.setProperty("--menu-top", (btn.getBoundingClientRect().bottom + 8) + "px");   // under the button, wherever the header wrapped to
   const open = () => { mark(); showView("grid"); place(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); };
@@ -69,7 +71,7 @@ export function initSliceMenu(run) {
   menu.addEventListener('click', e => e.stopPropagation());
   document.addEventListener('click', () => { if (Date.now() - lastInside > 400) close(); });
   addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-  onChange(keys => { if (keys.includes('npMode')) mark(); });
+  onChange(keys => { if (keys.includes('npMode') || keys.includes('mode')) mark(); });
   menu.querySelector('#menuBack').addEventListener('click', () => showView('grid'));
 
   menu.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => {
