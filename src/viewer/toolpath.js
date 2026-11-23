@@ -9,7 +9,7 @@ export function createToolpathView(scene) {
   const group = new THREE.Group();
   group.visible = false;
   scene.add(group);
-  let lines = null, travels = null, current = null, tip = null, marker = null;
+  let lines = null, travels = null, current = null, tip = null;
   let showTravel = false;
 
   // Time line. One entry per move, in print order (typed arrays: there can be 100k+ moves).
@@ -20,15 +20,15 @@ export function createToolpathView(scene) {
   let layerStart = [], layerEndTime = [];
 
   function clear() {
-    for (const o of [lines, travels, current, tip, marker]) if (o) { o.geometry.dispose(); o.material.dispose(); group.remove(o); }
-    lines = travels = current = tip = marker = null;
+    for (const o of [lines, travels, current, tip]) if (o) { o.geometry.dispose(); o.material.dispose(); group.remove(o); }
+    lines = travels = current = tip = null;
     mv = null; nMoves = 0; duration = 0; layerStart = []; layerEndTime = [];
     group.visible = false;
   }
 
   /**
    * Build the preview from buildToolpaths() output.
-   * @param o settings: lineW (marker size) and travelSpeed (mm/s)
+   * @param o settings: travelSpeed (mm/s)
    */
   function set(tp, o) {
     clear();
@@ -87,10 +87,8 @@ export function createToolpathView(scene) {
     const tipG = new THREE.BufferGeometry();
     tipG.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(6), 3));
     tip = new THREE.LineSegments(tipG, new THREE.LineBasicMaterial({ color: cssVar('accent') }));
-    marker = new THREE.Mesh(new THREE.SphereGeometry(Math.max(1, o.lineW * 0.8), 12, 8),
-      new THREE.MeshBasicMaterial({ color: cssVar('accent') }));
 
-    group.add(lines, travels, current, tip, marker);
+    group.add(lines, travels, current, tip);
     group.visible = true;
     simulate(duration);
   }
@@ -122,8 +120,6 @@ export function createToolpathView(scene) {
     tipPos.array.set([...a, ...p]);
     tipPos.needsUpdate = true;
     tip.visible = !done && mv.kind[i] === 1;
-    marker.position.set(p[0], p[1], p[2]);
-    marker.visible = t < duration;
     return { pos: p, layer: li, t };
   }
 
