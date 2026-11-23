@@ -19,11 +19,11 @@ Being built step by step.
   - Minimal surfaces: gyroid, I-WP and F-RD (Schoen, NASA TN D-5541, 1970), Schwarz D and P, Neovius, Fischer–Koch S, lidinoid, split P, and the double gyroid (two gyroid networks, printed as paired lines).
   - Each is a short trigonometric series whose zero set approximates the surface, cut at the layer height. Gyroid and Schwarz D are close to exact; I-WP, F-RD, lidinoid, split P and the double gyroid are rougher approximations. Not included: the other surfaces in Schoen's report (O,C-TO, C(D), the hybrids), for which no closed-form level-set was found.
 
-- [x] **Non-standing slice** (button next to Slice, style selector beside it; settings in Print paths → Non-standing slice). Three styles:
-  - *Curved layers* (non-planar): wave, ripple or cone height field. The mesh is refined and warped flat, sliced by the normal engine, and the paths are mapped back with their z following the surface. The first layers stay flat; the effect ramps in over 3 × amplitude. Warns above 30° slope.
-  - *Ruffled wall*: the wall waves up and down and in and out (one whole number of waves per loop, so it closes at the seam); every layer repeats the one below, with an optional phase shift per layer.
+- [x] **Non-standard slice** (button next to Slice; it opens a chooser with a picture of each way to slice, `ui/slice-menu.js`; settings in Print paths → Non-standard slice). Standard (layer by layer) plus three non-standard styles:
+  - *Curved layers* (non-planar): wave, ripple or cone height field. The part is measured in layer space (mesh refined and warped flat) and the path is mapped back with its z following the surface. The first layers stay flat; the effect ramps in over 3 × amplitude. Warns above 30° slope.
+  - *Ruffled wall*: the wall waves up and down and in and out, a whole number of waves per turn so it closes at the seam; every turn repeats the one below, so the crests stack in columns.
   - *Loop texture*: the wall path curls into small loops (a trochoid in the tangent/vertical plane) between two heights.
-  - Ruffle and loops reshape the walls of an ordinary slice; the infill stays flat. Travel moves lift by the texture height.
+  - These styles use their own engine (`src/nonstandard/`), separate from the standard slicer (only the G-code writer is shared): the part is measured as one radius per angle per layer and printed as one continuous helix with the style applied to the wall. It suits vase-like parts (cross-sections star-shaped around the axis); handles, cavities and separate parts are ignored. Base: flat wall ring plus zig-zag fill. No infill. Travel moves lift by the texture height.
 
 Not yet: top surfaces, and acceleration in the time estimate.
 
@@ -63,9 +63,10 @@ src/
     paths.js            layer-by-layer engine: priming loops, walls, solid bottom infill, infill; dispatches the spiral
     spiral.js           spiral engine: one continuous helix (outline blended between layers, fixed seam)
     infill.js           fill patterns: scanlines, zig-zag, minimal surfaces (TPMS registry, marching squares)
-    nonstanding.js      non-standing styles: ruffled wall, loop texture; dispatches the curved one
-    nonplanar.js        curved layers: refine + warp the mesh, slice, map the paths back
     gcode.js            toolpaths -> G-code, with pre-fill, safe start and safe end
+  nonstandard/          separate slicing algorithm for the Non-standard slice (only the G-code writer is shared)
+    engine.js           radial outline per layer, one continuous helix, styles: curved, ruffle, loops
+    field.js            height-field warp for curved layers (mesh refinement, layer space)
   ui/
     slice-panel.js      Slice / Export buttons, layer slider, slice summary
     form.js             renders schema fields, two-way bound to settings

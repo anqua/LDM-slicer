@@ -1,22 +1,17 @@
-// Non-planar slicing by height-field warping.
+// Height-field warp for curved layers (non-planar slicing), used by the non-standard engine.
 //
 // The printed layers are not flat: layer k is the surface  z = z' + A·g(x,y)·w(z')  with z' = the layer's
-// nominal height, g(x,y) a unit shape (wave, ripple, cone), A the amplitude and w(z') a smooth 0 → 1 ramp.
-// w = 0 below the flat base, so the first layers sit flat on the bed.
-//
-// Method: (1) refine long mesh edges, (2) move every vertex to its warped height z' (the inverse of the map
-// above), (3) slice that warped mesh with the ordinary planar engine, (4) map every toolpath point back,
-// z = z' + A·g·w(z'), after cutting the paths into short steps so the z follows the surface.
-// Walls, bottom, infill and the spiral engine all run unchanged in warped space.
+// nominal height ("layer space"), g(x,y) a unit shape (wave, ripple, cone), A the amplitude and w(z') a smooth
+// 0 → 1 ramp. w = 0 below the flat base, so the first layers sit flat on the bed.
+// To slice such layers, the mesh is moved into layer space (every vertex z -> z'), where the layers are flat
+// planes again; the paths found there are mapped back with z = z' + A·g·w(z').
 //
 // Layer thickness at a point is h·(1 + A·g·w'(z')). The ramp is at least 3·A tall so that factor stays
 // within 0.5–1.5.
-import { layerHeights, sliceMesh } from './slice.js';
-import { buildToolpaths } from './paths.js';
 
 const smooth = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
-/** The warp for settings `o`; `rmax` = largest distance of the model from the bed center (cone only). */
+/** The warp for settings `o`; `rmax` = largest distance of the model from the axis (cone only). */
 export function makeWarp(o, rmax = 100) {
   const A = o.npAmp, lam = Math.max(1, o.npLen);
   const th = (o.npAngle || 0) * Math.PI / 180, cx = Math.cos(th), cy = Math.sin(th);
@@ -26,7 +21,7 @@ export function makeWarp(o, rmax = 100) {
     : (x, y) => Math.sin(k * (x * cx + y * cy));
   const z0 = Math.max(0, o.npBase), ramp = Math.max(3 * A, 1e-6);
   const w = zp => smooth((zp - z0) / ramp);
-  const maxSlope = o.npType === 'cone' ? A / Math.max(1, rmax) : A * k;      // |∇ f|, rise per mm
+  const maxSlope = o.npType === 'cone' ? A / Math.max(1, rmax) : A * k;      // steepest rise per mm
   return {
     A, z0, ramp, maxSlope,
     /** actual height of the point (x, y) on the layer surface of nominal height zp */
@@ -34,7 +29,7 @@ export function makeWarp(o, rmax = 100) {
     /** nominal height of the layer surface through (x, y, z): solves zp + A·g·w(zp) = z by bisection */
     toLayer(x, y, z) {
       const a = A * g(x, y);
-      if (a === 0 || z <= z0 - Math.abs(a)) return z;
+      if (a === 0 || z <= z0) return z;
       let lo = z - Math.abs(a) - 1e-9, hi = z + Math.abs(a) + 1e-9;
       for (let i = 0; i < 34; i++) {
         const mid = (lo + hi) / 2;
@@ -46,7 +41,7 @@ export function makeWarp(o, rmax = 100) {
 }
 
 /** Split every edge longer than `maxEdge` at its midpoint (conforming: the decision depends on the edge alone). */
-function refine(pos, maxEdge, cap) {
+export function refine(pos, maxEdge, cap) {
   let cur = Array.from(pos);
   const lt = (p, i, q, j) => p[i] < q[j] || (p[i] === q[j] && (p[i + 1] < q[j + 1] || (p[i + 1] === q[j + 1] && p[i + 2] < q[j + 2])));
   const mid = (p, i, j) => {                                  // midpoint from the canonically ordered end points
@@ -89,61 +84,19 @@ function refine(pos, maxEdge, cap) {
   return Float64Array.from(cur);
 }
 
-/** Cut a polyline into steps of at most `step` mm in xy (z is carried along linearly). */
-function densify(pts, step) {
-  const out = [pts[0]];
-  for (let i = 1; i < pts.length; i++) {
-    const p = pts[i - 1], q = pts[i], d = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    const n = Math.max(1, Math.ceil(d / step));
-    for (let k = 1; k < n; k++) { const t = k / n; out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t]); }
-    out.push(q);
-  }
-  return out;
-}
-
 /**
- * @param pos  triangle soup (world coordinates, z up, model on z = 0)
- * @param o    settings (S)
- * @returns    { tp, info } where tp has the shape of buildToolpaths() with real (curved) z, and
- *             info = { zMax, slopeDeg, ... } for warnings and G-code
+ * Refine `pos` and move its vertices into layer space. Returns { mesh, top } (top = highest layer-space z).
+ * Edges of about wavelength / 10 keep the warp error near A/20; the triangle count is capped.
  */
-export function buildNonPlanar(pos, o) {
-  let rmax = 1;
-  for (let i = 0; i < pos.length; i += 3) rmax = Math.max(rmax, Math.hypot(pos[i], pos[i + 1]));
-  const warp = makeWarp(o, rmax);
-  const lam = o.npType === 'cone' ? 8 : o.npLen;
-
-  // 1. Refine (edges ≈ wavelength / 10 keep the warp error near A/20), with a cap on the triangle count.
-  let edge = Math.min(8, Math.max(1.5, lam / 10)), mesh = null;
+export function warpMesh(pos, warp, wavelength) {
+  let edge = Math.min(8, Math.max(1.5, wavelength / 10)), mesh = null;
   for (let tries = 0; tries < 6 && !mesh; tries++, edge *= 1.5) mesh = refine(pos, edge, 900000);
   if (!mesh) throw new Error('The mesh is too large to refine for non-planar slicing.');
-
-  // 2. Warp vertices into layer space.
   let top = 0;
   for (let i = 0; i < mesh.length; i += 3) {
     const zp = warp.toLayer(mesh[i], mesh[i + 1], mesh[i + 2]);
     mesh[i + 2] = zp;
     if (zp > top) top = zp;
   }
-
-  // 3. Planar slicing and toolpaths in layer space.
-  const sliced = sliceMesh(mesh, layerHeights(top, o.firstLayerH || o.layerH, o.layerH), Math.max(0.02, o.lineW * 0.03));
-  const tp = buildToolpaths(sliced, o);
-
-  // 4. Back to real space.
-  const step = Math.max(0.5, Math.min(1.5, lam / 25));
-  let zMax = 0, zMin = Infinity;
-  for (const l of tp.layers) for (const p of l.paths) {
-    p.pts = densify(p.pts, step).map(([x, y, zp]) => {
-      const z = warp.toWorld(x, y, zp);
-      if (z > zMax) zMax = z;
-      if (z < zMin) zMin = z;
-      return [x, y, z];
-    });
-  }
-
-  const slopeDeg = Math.atan(warp.maxSlope) * 180 / Math.PI;
-  if (slopeDeg > 30) tp.warnings.push(`Steepest layer slope is ${slopeDeg.toFixed(0)}°. Above about 30° the nozzle body may touch the print. Lower the amplitude or lengthen the wavelength.`);
-  if (zMax > o.bedZ) tp.warnings.push(`The print reaches Z ${zMax.toFixed(0)} mm, above the ${o.bedZ} mm build height.`);
-  return { tp, info: { zMax, zMin, slopeDeg, ramp: warp.ramp, base: warp.z0, triangles: mesh.length / 9 } };
+  return { mesh, top };
 }

@@ -104,12 +104,12 @@ export const SCHEMA = {
     { k: 'safeEndSpeed', label: 'Safe end speed', unit: 'mm/s', def: 12 },
     { k: 'safeEndFlow', label: 'Safe end final flow', unit: '%', def: 60,
       help: 'Flow at the very end of a path; it ramps down to this from full flow.' },
-    // Used by the Non-standing slice button (slicer/nonstanding.js, nonplanar.js). `dep`: [key, values]: the row
+    // Used by the Non-standard slice button (src/nonstandard/). `dep`: [key, values]: the row
     // is only shown while that setting has one of these values.
-    { h: 'Non-standing slice' },
+    { h: 'Non-standard slice' },
     { k: 'npMode', label: 'Style', type: 'select', def: 'curved',
       opts: [['curved', 'Curved layers (non-planar)'], ['ruffle', 'Ruffled wall'], ['loops', 'Loop texture']],
-      help: 'Also selectable next to the Non-standing slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: the wall waves up and down and in and out as it goes round. Loop texture: the wall path curls into small loops between two heights.' },
+      help: 'Also selectable next to the Non-standard slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: the wall waves up and down and in and out as it goes round. Loop texture: the wall path curls into small loops between two heights.' },
     { k: 'npType', label: 'Layer shape', type: 'select', def: 'wave', dep: ['npMode', ['curved']],
       opts: [['wave', 'Wave (sine across the part)'], ['ripple', 'Ripple (rings from the center)'], ['cone', 'Cone (center higher)']],
       help: 'Shape of the layers. Wave: straight ridges across the part. Ripple: concentric rings. Cone: layers rise toward the center by the amplitude.' },
@@ -125,8 +125,6 @@ export const SCHEMA = {
       help: 'Length of one wave along the wall. Adjusted slightly per loop so the waves close up at the seam.' },
     { k: 'rfRadial', label: 'In / out', unit: 'mm', def: 3, step: 0.5, min: -20, max: 20, dep: ['npMode', ['ruffle']],
       help: 'How far the wall moves outward at a crest and inward at a trough (negative = reversed). 0 = waves in height only.' },
-    { k: 'rfShift', label: 'Shift per layer', unit: '°', def: 0, step: 5, dep: ['npMode', ['ruffle']],
-      help: 'Phase shift of the wave from one layer to the next. 0 stacks the crests in columns (scalloped); other values make the pattern spiral or zigzag. Not used by the spiral vase mode, whose turns must join.' },
     { k: 'npBase', label: 'Flat base height', unit: 'mm', def: 5, step: 1, min: 0, max: 200, dep: ['npMode', ['curved', 'ruffle']],
       help: 'Layers up to this height are flat, so the print sits on the bed; the effect grows above it.' },
     { k: 'lpSize', label: 'Loop diameter', unit: 'mm', def: 3, step: 0.5, min: 1, max: 12, dep: ['npMode', ['loops']],

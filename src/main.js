@@ -16,8 +16,9 @@ import { createToolpathView } from './viewer/toolpath.js';
 import { layerHeights, sliceMesh } from './slicer/slice.js';
 import { buildToolpaths } from './slicer/paths.js';
 import { toGcode } from './slicer/gcode.js';
-import { buildNonStanding } from './slicer/nonstanding.js';
+import { buildNonStandard } from './nonstandard/engine.js';
 import { initSidebarResize } from './ui/sidebar-resize.js';
+import { initSliceMenu } from './ui/slice-menu.js';
 import { initVersionStamp } from './ui/version-stamp.js';
 
 const { scene, rig, onFrame } = createViewer(document.getElementById('view'));
@@ -85,7 +86,7 @@ function runSlice(nonplanar = false) {
     try {
       let tp, o = S, note = '';
       if (nonplanar) {
-        const r = buildNonStanding(pos, S, model.bounds().max.z);
+        const r = buildNonStandard(pos, S, model.bounds().max.z);
         tp = r.tp;
         // Travel moves are straight in xy at the higher end point + hop: lift by the full texture height.
         o = { ...S, zhop: Math.max(S.zhop, r.hop) };
@@ -205,13 +206,7 @@ initPanels({
 
 initViewControls(rig, frameView);
 initSidebarResize();
-{                                      // style selector next to the Non-standing slice button, same setting as in Print paths
-  const sel = document.getElementById('nsStyle');
-  sel.innerHTML = SCHEMA.paths.find(f => f.k === 'npMode').opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
-  sel.value = S.npMode;
-  sel.addEventListener('change', () => update({ npMode: sel.value }));
-  onChange(keys => { if (keys.includes('npMode')) sel.value = S.npMode; });
-}
+initSliceMenu(runSlice);               // chooser with pictures; sets the style, then slices
 initVersionStamp();                    // async; does not block anything
 initFileInput(openFile);
 document.getElementById('demo').addEventListener('click', () => openModel(demoVaseGeometry(), 'demo-vase.stl'));

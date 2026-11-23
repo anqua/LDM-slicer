@@ -25,9 +25,9 @@
   <button class="btn" id="demo">Demo vase</button>
   <div class="spacer"></div>
   <button class="btn primary" id="slice" disabled title="Load a model first">Slice</button>
-  <div class="btn-group">
-    <button class="btn primary" id="sliceNP" disabled title="Load a model first">Non-standing slice</button>
-    <select class="btn" id="nsStyle" title="Style of the non-standing slice" aria-label="Non-standing slice style"></select>
+  <div class="menu-wrap">
+    <button class="btn primary" id="sliceNP" disabled aria-haspopup="true" aria-expanded="false" title="Load a model first">Non-standard slice ▾</button>
+    <div class="slice-menu" id="sliceMenu" hidden></div>
   </div>
   <button class="btn" id="export" disabled title="Slice first">Export G-code</button>
   <a class="btn" id="book" href="https://chloez08.github.io/clay-studio/" target="_blank" rel="noopener">Book time for clay printing</a>

@@ -15,9 +15,19 @@ header{min-height:var(--header-h);flex-wrap:wrap;row-gap:6px;padding-top:6px;pad
 .spacer{flex:1}
 a.btn{text-decoration:none;color:var(--text);white-space:nowrap;display:inline-block}
 header .btn{white-space:nowrap;flex-shrink:0}
-.btn-group{display:flex;gap:0}
-.btn-group .btn:first-child{border-top-right-radius:0;border-bottom-right-radius:0}
-.btn-group select.btn{border-left:0;border-top-left-radius:0;border-bottom-left-radius:0;padding:6px 6px}
+/* Slice-style chooser: opaque panel under the button, a grid of picture cards. */
+.menu-wrap{position:relative}
+.slice-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:30;background:var(--panel);
+  border:1px solid var(--accent);border-radius:8px;padding:12px;width:max-content;max-width:calc(100vw - 24px)}
+.slice-menu[hidden]{display:none}
+.menu-title{font-size:12px;color:var(--muted);margin-bottom:8px;font-family:var(--font-mono)}
+.menu-grid{display:grid;grid-template-columns:repeat(2,168px);gap:8px}
+.opt{display:flex;flex-direction:column;gap:4px;text-align:left;padding:8px;background:var(--bg);
+  border:1px solid var(--line);border-radius:6px;cursor:pointer;color:var(--text)}
+.opt:hover,.opt.on{border-color:var(--accent)}
+.opt svg{width:100%;height:auto;display:block;background:#000;border-radius:4px}
+.opt b{font-weight:600;font-size:13px}
+.opt small{color:var(--muted);font-size:11px;line-height:1.3}
 .row[hidden]{display:none}
 
 /* Lab attribution (@A), right end of the header. Same lockup and type as the @A website footer
@@ -72,5 +82,8 @@ main{position:relative;overflow:hidden}
   .viewbtns{top:auto;bottom:14px}
   .slicebar{bottom:56px;left:8px;right:8px}
   .legend{display:none}
+  .menu-wrap{position:static}
+  .slice-menu{position:fixed;top:calc(var(--header-h) + 4px);left:8px;right:8px;width:auto}
+  .menu-grid{grid-template-columns:1fr 1fr}
   .side-resize{display:none}
 }
