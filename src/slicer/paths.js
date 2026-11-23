@@ -1,23 +1,13 @@
-// Layer contours -> printable toolpaths: priming loops (skirt), walls, solid bottom, infill, spiral vase.
+// Layer contours -> printable toolpaths: priming loops (skirt), walls, solid bottom, infill (layer by layer),
+// and, in spiral mode, the spiral vase (a separate engine, spiral.js).
 //
 // Output: { layers: [{ z, h, paths: [Path] }], warnings: [string] }
 // Path:   { type: 'skirt'|'outer'|'inner'|'bottom'|'infill'|'spiral', pts: [[x, y, z], ...], h, speed, join? }
 // `join: true` means the path continues straight on from the previous one (spiral vase):
 // no travel, no safe end / safe start in between.
-import { area, contains, offset, startAt, nearestIndex, convexHull, grow, length, simplifyLine } from './polygon.js';
+import { area, islands, offset, startAt, nearestIndex, convexHull, grow, simplifyLine } from './polygon.js';
 import { fillLines, orderLines, zigzag, tpmsLines, TPMS } from './infill.js';
-
-/** Group a layer's loops into islands: one outer (CCW) loop plus the holes directly inside it. */
-function islands(loops) {
-  const outers = loops.filter(l => area(l) > 0).sort((a, b) => area(a) - area(b));   // smallest first
-  const holes = loops.filter(l => area(l) < 0);
-  const out = outers.map(o => ({ outer: o, holes: [] }));
-  for (const h of holes) {
-    const owner = out.find(i => contains(i.outer, h[0]));     // smallest enclosing outer
-    if (owner) owner.holes.push(h);
-  }
-  return out;
-}
+import { buildSpiral } from './spiral.js';
 
 const dist2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
 
@@ -164,7 +154,7 @@ export function buildToolpaths(sliced, o) {
   const spiral = o.mode === 'spiral';
   const bottomN = Math.max(0, Math.round(o.bottomLayers));
   const layers = [];
-  let pos = null, spiralStarted = false, multiIsland = false;
+  let pos = null, multiIsland = false;
 
   sliced.forEach((sl, i) => {
     const out = { z: sl.z, h: sl.h, paths: [] };
@@ -182,38 +172,21 @@ export function buildToolpaths(sliced, o) {
       }
     }
 
-    if (!spiral || i < bottomN) {
-      const opts = spiral ? { ...o, walls: 1 } : o;
-      const r = layerPaths(sl.loops, sl.z, sl.h, opts, i < bottomN, i, pos, rng);
-      out.paths.push(...r.paths);
-      pos = r.pos ?? pos;
-      return;
-    }
-
-    // Spiral vase: largest outline only, rising continuously from the previous layer's height.
-    const isl = islands(sl.loops);
-    if (isl.length > 1) multiIsland = true;
-    const outer = isl.reduce((m, it) => (area(it.outer) > area(m.outer) ? it : m), isl[0]).outer;
-    const loop = offset(outer, o.lineW / 2);
-    if (!loop) return;
-    const start = pos ? nearestIndex(loop, pos[0], pos[1]) : 0;
-    const ring = startAt(loop, start);
-    ring.push(ring[0]);
-    const L = length(ring, false);
-    const flat = !spiralStarted && i === 0;                    // nothing below: first loop stays flat
-    const z0 = flat ? sl.z : sl.z - sl.h;
-    let s = 0;
-    const pts = ring.map((p, k) => {
-      if (k) s += Math.hypot(p[0] - ring[k - 1][0], p[1] - ring[k - 1][1]);
-      return [p[0], p[1], z0 + (sl.z - z0) * (L ? s / L : 1)];
-    });
-    // A joined turn starts exactly where the previous one ended. The nearest vertex of the new outline can be a
-    // few mm away, and without this point that step is missing from the preview (a visible break in the line).
-    if (spiralStarted && pos) pts.unshift([pos[0], pos[1], pos[2]]);
-    out.paths.push({ type: 'spiral', pts, h: sl.h, join: spiralStarted });
-    spiralStarted = true;
-    pos = pts.at(-1);
+    // Layer-by-layer engine: every layer in layered mode, and the solid base in spiral mode.
+    // Everything above the base in spiral mode is a separate engine (spiral.js), run after this loop.
+    if (spiral && i >= bottomN) return;
+    const opts = spiral ? { ...o, walls: 1 } : o;
+    const r = layerPaths(sl.loops, sl.z, sl.h, opts, i < bottomN, i, pos, rng);
+    out.paths.push(...r.paths);
+    pos = r.pos ?? pos;
   });
+
+  // Spiral engine: one continuous helix from the top of the base to the top of the model.
+  if (spiral) {
+    const sp = buildSpiral(sliced, o, bottomN);
+    for (const [i, p] of sp.paths) layers[i].paths.push(p);
+    multiIsland = sp.multiPart;
+  }
 
   if (multiIsland) warnings.push('Spiral mode prints one outline per layer; some layers have several parts and only the largest is printed.');
   if (spiral && o.walls > 1) warnings.push('Spiral mode always prints a single wall.');

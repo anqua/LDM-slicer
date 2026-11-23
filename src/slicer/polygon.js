@@ -22,6 +22,18 @@ export function contains(poly, [x, y]) {
   return inside;
 }
 
+/** Group a layer's loops into islands: one outer (CCW) loop plus the holes directly inside it. */
+export function islands(loops) {
+  const outers = loops.filter(l => area(l) > 0).sort((a, b) => area(a) - area(b));   // smallest first
+  const holes = loops.filter(l => area(l) < 0);
+  const out = outers.map(o => ({ outer: o, holes: [] }));
+  for (const h of holes) {
+    const owner = out.find(i => contains(i.outer, h[0]));     // smallest enclosing outer
+    if (owner) owner.holes.push(h);
+  }
+  return out;
+}
+
 export function length(pts, closed) {
   let L = 0;
   for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);

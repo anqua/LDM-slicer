@@ -53,8 +53,9 @@ src/
     demo.js             procedural demo vase
   slicer/
     slice.js            mesh -> layer heights and closed contours (outer CCW, holes CW)
-    polygon.js          2D helpers: area, offset, simplify, convex hull
-    paths.js            contours -> toolpaths: priming loops, walls, solid bottom infill, infill, spiral
+    polygon.js          2D helpers: area, offset, simplify, convex hull, islands
+    paths.js            layer-by-layer engine: priming loops, walls, solid bottom infill, infill; dispatches the spiral
+    spiral.js           spiral engine: one continuous helix (outline blended between layers, fixed seam)
     infill.js           fill patterns: scanlines, zig-zag, minimal surfaces (TPMS registry, marching squares)
     gcode.js            toolpaths -> G-code, with pre-fill, safe start and safe end
   ui/
