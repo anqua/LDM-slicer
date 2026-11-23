@@ -1,3 +1,5 @@
+import { TPMS } from '../slicer/infill.js';
+
 // Settings definition. Drives the sidebar forms and supplies defaults.
 // Printer `def` values are generic fallbacks; the default preset (core/printers.js) overrides them.
 // Field: { k, label, def, type?: 'num'|'select'|'text'|'area', unit?, step?, min?, max?, opts?, help? }
@@ -64,12 +66,12 @@ export const SCHEMA = {
     { h: 'Infill' },
     { k: 'infill', label: 'Infill pattern', type: 'select', def: 'none',
       opts: [['none', 'None (hollow)'], ['zigzag', 'Zig-zag between walls'], ['lines', 'Lines'], ['grid', 'Grid'],
-        ['gyroid', 'Gyroid'], ['schwarzD', 'Schwarz D (diamond)']],
+        ...Object.entries(TPMS).map(([id, d]) => [id, d.name])],        // minimal surfaces, from slicer/infill.js
       help: 'Layer-by-layer mode only. The base uses the Bottom layers settings.' },
     { k: 'infillAngle', label: 'Infill angle', unit: '°', def: 45,
       help: 'Direction of lines / grid infill.' },
     { k: 'infillSpacing', label: 'Infill spacing', unit: 'mm', def: 20,
-      help: 'Line distance for lines / grid, wave length for zig-zag, cell size for gyroid and Schwarz D.' },
+      help: 'Line distance for lines / grid, wave length for zig-zag, cell size (one repeat of the pattern) for the minimal surfaces.' },
     { k: 'zigzagWidth', label: 'Zig-zag width', unit: 'mm', def: 15,
       help: 'Zig-zag only: distance from the walls to an extra inner wall, with the zig-zag in between.' },
     { k: 'seam', label: 'Seam position', type: 'select', def: 'rear',

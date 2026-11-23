@@ -15,7 +15,9 @@ Being built step by step.
 - [x] **Step 3 – Toolpath preview:** paths colored by type, a layer slider (arrow keys step through layers), optional travel moves and model overlay. **Play** (or Space) simulates the print at 10×, 20× or 30× speed: the paths grow move by move and the printer head follows the nozzle. On the delta printer, the carriages and arms move with it.
 - [x] **Step 4 – G-code export:** E values, speeds, min layer time, start and end G-code, plus clay-specific start and end handling modeled on [Termite](https://www.food4rhino.com/en/app/termite): first layer height, pre-fill, safe start and safe end.
 
-- [x] **Infill** (layer-by-layer mode): zig-zag between the walls and an extra inner wall, lines, grid, gyroid and Schwarz D (diamond), with adjustable spacing / cell size.
+- [x] **Infill** (layer-by-layer mode): zig-zag between the walls and an extra inner wall, lines, grid, and triply periodic minimal surfaces, with adjustable spacing / cell size. A preview of the chosen pattern shows under the dropdown.
+  - Minimal surfaces: gyroid, I-WP and F-RD (Schoen, NASA TN D-5541, 1970), Schwarz D and P, Neovius, Fischer–Koch S, lidinoid, split P, and the double gyroid (two gyroid networks, printed as paired lines).
+  - Each is a short trigonometric series whose zero set approximates the surface, cut at the layer height. Gyroid and Schwarz D are close to exact; I-WP, F-RD, lidinoid, split P and the double gyroid are rougher approximations. Not included: the other surfaces in Schoen's report (O,C-TO, C(D), the hybrids), for which no closed-form level-set was found.
 
 Not yet: top surfaces, and acceleration in the time estimate.
 
@@ -53,7 +55,7 @@ src/
     slice.js            mesh -> layer heights and closed contours (outer CCW, holes CW)
     polygon.js          2D helpers: area, offset, simplify, convex hull
     paths.js            contours -> toolpaths: priming loops, walls, solid bottom infill, infill, spiral
-    infill.js           fill patterns: scanlines, zig-zag, gyroid / Schwarz D (marching squares)
+    infill.js           fill patterns: scanlines, zig-zag, minimal surfaces (TPMS registry, marching squares)
     gcode.js            toolpaths -> G-code, with pre-fill, safe start and safe end
   ui/
     slice-panel.js      Slice / Export buttons, layer slider, slice summary

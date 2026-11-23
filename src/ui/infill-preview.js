@@ -3,15 +3,33 @@
 // Lines are drawn at bead width; a darker colour shows how the pattern changes on the next layer.
 import { S, onChange } from '../core/settings.js';
 import { offset } from '../slicer/polygon.js';
-import { fillLines, zigzag, tpmsLines } from '../slicer/infill.js';
+import { fillLines, zigzag, tpmsLines, TPMS } from '../slicer/infill.js';
+
+// What each minimal surface looks like and who found it (the name comes from the registry in infill.js).
+const TPMS_TEXT = {
+  gyroid: 'Curved lattice with no straight lines or flat faces; strong in every direction. Found by Alan Schoen (NASA, 1970).',
+  schwarzD: 'Diamond-like lattice: two interwoven channel networks, more angular than the gyroid. Schwarz, 1865.',
+  schwarzP: 'Primitive cubic lattice with round channels running along the three axes. Schwarz, 1865.',
+  neovius: 'Like P, but with thicker junctions: a denser, heavier lattice. Neovius, 1883.',
+  iwp: 'Channels that meet in ring-shaped junctions; strong along the axes. Schoen, 1970.',
+  frd: 'Face-centred cubic lattice (rhombic-dodecahedron cells). Schoen, 1970.',
+  fischerKochS: 'Intertwined channels with a twist, related to the gyroid. Fischer and Koch, 1987.',
+  lidinoid: 'Asymmetric lattice with helical channels and no mirror symmetry. Lidin and Larsson, 1990.',
+  splitP: 'A P-like lattice with split junctions.',
+  doubleGyroid: 'Two separate gyroid networks woven through each other, each wrapped in a thin wall, so the two channels never meet. Printed as paired lines.',
+};
+// Level-set forms that are a rougher approximation of the true surface (see infill.js).
+const APPROX = new Set(['iwp', 'frd', 'lidinoid', 'splitP', 'doubleGyroid']);
 
 const PATTERNS = [
   { id: 'none', name: 'None', desc: 'Hollow: walls only. Lightest and fastest; the usual choice for vessels.' },
   { id: 'zigzag', name: 'Zig-zag', desc: 'An extra inner wall, joined to the walls by a continuous wave. A stiff double wall, common in clay printing.' },
-  { id: 'lines', name: 'Lines', desc: 'Parallel lines, turning 90° every layer, so each layer crosses the one below.' },
+  { id: 'lines', name: 'Lines', desc: 'Parallel lines, turning 90° every layer, so each layer crosses the one below.', next: true },
   { id: 'grid', name: 'Grid', desc: 'Lines in both directions on every layer. Strong, but material doubles up at every crossing.' },
-  { id: 'gyroid', name: 'Gyroid', desc: 'Curved 3D lattice that shifts from layer to layer. Strong in all directions, no crossings within a layer.' },
-  { id: 'schwarzD', name: 'Schwarz D', desc: 'Diamond-shaped 3D lattice that shifts from layer to layer. Similar strength to gyroid, more angular.' },
+  ...Object.entries(TPMS).map(([id, d]) => ({
+    id, name: d.name, next: true, approx: APPROX.has(id),
+    desc: (TPMS_TEXT[id] ?? '') + ' Changes from layer to layer.',
+  })),
 ];
 
 // Settings that change how the tiles look.
@@ -43,13 +61,12 @@ function sample(id, R) {
     }
     case 'lines': now = fillLines(clip, ang, sp); next = fillLines(clip, ang + 90, sp); break;
     case 'grid': now = [...fillLines(clip, ang, sp), ...fillLines(clip, ang + 90, sp)]; break;
-    case 'gyroid':
-    case 'schwarzD': {
-      const res = Math.min(lw, sp / 10), z = sp * 0.1;
-      now = tpmsLines(clip, z, id, sp, res);
-      next = tpmsLines(clip, z + sp / 4, id, sp, res);       // a quarter cell higher: shows how it shifts
-      break;
-    }
+    default:
+      if (TPMS[id]) {
+        const res = Math.min(lw, sp / 10), z = sp * 0.1;
+        now = tpmsLines(clip, z, id, sp, res);
+        next = tpmsLines(clip, z + sp / 4, id, sp, res);     // a quarter cell higher: shows how it shifts
+      }
   }
   return { wallLoops, extraWall, now, next, lw };
 }
@@ -80,7 +97,7 @@ export function initInfillPreview() {
     if (!cur || cur.id === 'none') { box.hidden = true; box.innerHTML = ''; return; }
     const sp = Math.max(S.lineW * 2, S.infillSpacing);
     const R = Math.min(150, Math.max(40, sp * 3));            // a few cells across, whatever the spacing
-    const hasNext = cur.id === 'lines' || cur.id === 'gyroid' || cur.id === 'schwarzD';
+    const hasNext = !!cur.next;
     box.hidden = false;
     box.innerHTML = `
       <div class="infill-tile" role="img" aria-label="${cur.name} infill, top view">${tileSVG(cur.id, R)}</div>
@@ -90,7 +107,7 @@ export function initInfillPreview() {
         ${hasNext ? '<span><i style="background:var(--path-infill-next)"></i>Next layer</span>' : ''}
         <span class="muted">Sample Ø${Math.round(2 * R)} mm, top view</span>
       </div>
-      <small class="infill-desc"><b>${cur.name}:</b> ${cur.desc}</small>`;
+      <small class="infill-desc"><b>${cur.name}:</b> ${cur.desc}${cur.approx ? ' <span class="muted">(Approximate level-set form: close to, not exactly, the true surface.)</span>' : ''}</small>`;
   };
 
   onChange(keys => {

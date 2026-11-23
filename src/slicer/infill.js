@@ -1,5 +1,5 @@
 // Fill patterns: straight scanlines (bottom, lines, grid), zig-zag between walls, and
-// triply periodic minimal surfaces (gyroid, Schwarz D) cut at the layer height.
+// triply periodic minimal surfaces (TPMS: gyroid, Schwarz D / P, Neovius, I-WP, F-RD, ...) cut at the layer height.
 import { offset, length } from './polygon.js';
 
 const dist2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
@@ -82,21 +82,67 @@ export function zigzag(b, inset, width, pitch) {
 
 // ---- Triply periodic minimal surfaces -----------------------------------------------------
 
-const TPMS = {
-  gyroid: (x, y, z) => Math.sin(x) * Math.cos(y) + Math.sin(y) * Math.cos(z) + Math.sin(z) * Math.cos(x),
-  schwarzD: (x, y, z) => Math.sin(x) * Math.sin(y) * Math.sin(z) + Math.sin(x) * Math.cos(y) * Math.cos(z)
-    + Math.cos(x) * Math.sin(y) * Math.cos(z) + Math.cos(x) * Math.cos(y) * Math.sin(z),
+// Each surface is the zero set of a short trigonometric series (a "level-set approximation"), period 2π in
+// x, y and z. They are close to, not identical with, the true minimal surfaces; mean-curvature error is
+// measured in tests (see meanCurvatureError). `levels` are the values of f at which the surface is cut: one
+// level for an ordinary surface, two for the double gyroid.
+const { sin: S, cos: C } = Math;
+const sumPairs = (a, b, c) => a * b + b * c + c * a;
+
+export const TPMS = {
+  gyroid: {
+    name: 'Gyroid', by: 'Schoen 1970 (NASA TN D-5541)',
+    f: (x, y, z) => S(x) * C(y) + S(y) * C(z) + S(z) * C(x),
+  },
+  schwarzD: {
+    name: 'Schwarz D (diamond)', by: 'Schwarz 1865',
+    f: (x, y, z) => S(x) * S(y) * S(z) + S(x) * C(y) * C(z) + C(x) * S(y) * C(z) + C(x) * C(y) * S(z),
+  },
+  schwarzP: {
+    name: 'Schwarz P (primitive)', by: 'Schwarz 1865',
+    f: (x, y, z) => C(x) + C(y) + C(z),
+  },
+  neovius: {
+    name: 'Neovius', by: 'Neovius 1883',
+    f: (x, y, z) => 3 * (C(x) + C(y) + C(z)) + 4 * C(x) * C(y) * C(z),
+  },
+  iwp: {
+    name: 'I-WP', by: 'Schoen 1970 (NASA TN D-5541)',
+    f: (x, y, z) => 2 * sumPairs(C(x), C(y), C(z)) - (C(2 * x) + C(2 * y) + C(2 * z)),
+  },
+  frd: {
+    name: 'F-RD', by: 'Schoen 1970 (NASA TN D-5541)',
+    f: (x, y, z) => 4 * C(x) * C(y) * C(z) - sumPairs(C(2 * x), C(2 * y), C(2 * z)),
+  },
+  fischerKochS: {
+    name: 'Fischer–Koch S', by: 'Fischer & Koch 1987',
+    f: (x, y, z) => C(2 * x) * S(y) * C(z) + C(2 * y) * S(z) * C(x) + C(2 * z) * S(x) * C(y),
+  },
+  lidinoid: {
+    name: 'Lidinoid', by: 'Lidin & Larsson 1990',
+    f: (x, y, z) => 0.5 * (S(2 * x) * C(y) * S(z) + S(2 * y) * C(z) * S(x) + S(2 * z) * C(x) * S(y))
+      - 0.5 * sumPairs(C(2 * x), C(2 * y), C(2 * z)) + 0.15,
+  },
+  splitP: {
+    name: 'Split P', by: 'literature level-set form',
+    f: (x, y, z) => 1.1 * (S(2 * x) * S(z) * C(y) + S(2 * y) * S(x) * C(z) + S(2 * z) * S(y) * C(x))
+      - 0.2 * sumPairs(C(2 * x), C(2 * y), C(2 * z)) - 0.4 * (C(2 * x) + C(2 * y) + C(2 * z)),
+  },
+  doubleGyroid: {
+    name: 'Double gyroid', by: 'two gyroid networks (gyroid cut at ±0.5)',
+    f: (x, y, z) => S(x) * C(y) + S(y) * C(z) + S(z) * C(x), levels: [0.5, -0.5],
+  },
 };
 
 /**
  * Cut a minimal surface with the plane at height z, inside `polys` (even-odd), by marching squares.
- * @param kind  'gyroid' | 'schwarzD'
+ * @param kind  a key of TPMS
  * @param cell  period of the pattern in mm
  * @param res   grid step in mm
  * @returns     open polylines [[x, y], ...]
  */
 export function tpmsLines(polys, z, kind, cell, res) {
-  const f = TPMS[kind], k = 2 * Math.PI / cell, kz = k * z;
+  const def = TPMS[kind], f = def.f, levels = def.levels ?? [0], k = 2 * Math.PI / cell, kz = k * z;
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of polys) for (const [x, y] of p) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
   if (!isFinite(x0)) return [];
@@ -116,9 +162,14 @@ export function tpmsLines(polys, z, kind, cell, res) {
       for (let i = Math.max(0, Math.ceil((xs[q] - x0) / res)); i < nx && X(i) <= xs[q + 1]; i++) inside[j * nx + i] = 1;
   }
 
-  const v = new Float32Array(nx * ny);
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) v[j * nx + i] = f(k * X(i), k * Y(j), kz);
+  const fv = new Float32Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) fv[j * nx + i] = f(k * X(i), k * Y(j), kz);
+  const out = [];
+  for (const lv of levels) out.push(...trace(lv ? fv.map(a => a - lv) : fv));   // one cut per level
+  return out;
 
+  /** Marching squares + chaining for the field v (zero crossings). */
+  function trace(v) {
   // Edge ids: horizontal edge (i,j)-(i+1,j) = 2*(j*nx+i), vertical (i,j)-(i,j+1) = 2*(j*nx+i)+1.
   const pt = new Map();
   const edgePoint = id => {
@@ -173,4 +224,5 @@ export function tpmsLines(polys, z, kind, cell, res) {
     if (ids.length >= 3 || length(ids.map(edgePoint), false) > res * 2) lines.push(ids.map(edgePoint));
   }
   return lines;
+  }                                                                        // end trace()
 }

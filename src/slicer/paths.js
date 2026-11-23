@@ -5,7 +5,7 @@
 // `join: true` means the path continues straight on from the previous one (spiral vase):
 // no travel, no safe end / safe start in between.
 import { area, contains, offset, startAt, nearestIndex, convexHull, grow, length, simplifyLine } from './polygon.js';
-import { fillLines, orderLines, zigzag, tpmsLines } from './infill.js';
+import { fillLines, orderLines, zigzag, tpmsLines, TPMS } from './infill.js';
 
 /** Group a layer's loops into islands: one outer (CCW) loop plus the holes directly inside it. */
 function islands(loops) {
@@ -139,8 +139,8 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
         add('infill', orderLines(segs, pos, o.lineW * 2.5));
         break;
       }
-      case 'gyroid':
-      case 'schwarzD': {
+      default: {                                  // minimal surfaces (infill.js TPMS); 'none' falls through
+        if (!TPMS[o.infill]) break;
         const clip = clipOf(inset);
         if (!usable(clip)) break;
         const res = Math.min(o.lineW, sp / 10);
