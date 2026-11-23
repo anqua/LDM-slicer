@@ -198,7 +198,7 @@ export function buildToolpaths(sliced, o) {
 
   // Speeds: first layer, then bottom infill / normal, capped by the machine; stretched to meet the
   // min layer time. Bottom infill also carries its own flow multiplier (applied in gcode.js).
-  const bottomFlow = (o.bottomFlow ?? 100) / 100;
+  const bottomFlow = (o.bottomFlow ?? 75) / 100;
   layers.forEach((l, i) => {
     for (const p of l.paths) {
       const s = i === 0 ? o.firstSpeed : p.type === 'bottom' ? (o.bottomSpeed ?? o.speed) : o.speed;
