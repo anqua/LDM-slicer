@@ -11,7 +11,7 @@ const defaults = {};
 for (const group of Object.values(SCHEMA)) for (const f of group) if (f.k) defaults[f.k] = f.def;
 Object.assign(defaults, PRINTERS[DEFAULT_PRINTER].values, { printerPreset: DEFAULT_PRINTER });
 // View preferences. `printerVisible` replaces `showPrinter`, which was force-saved as false on every load.
-Object.assign(defaults, { printerVisible: true, gcodeExact: false });
+Object.assign(defaults, { printerVisible: true, gcodeExact: false, viewMode: "lines" });
 
 // Printer defaults before the WASP preset existed. A saved state with no `printerPreset` key
 // whose printer values all still equal these was never customized: move it to the new default.

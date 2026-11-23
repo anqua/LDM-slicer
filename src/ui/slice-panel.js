@@ -36,6 +36,10 @@ export function initSlicePanel(actions) {
   const modelSw = bindSwitch($('showModel'), false, actions.setShowModel);
   bindSwitch($('showTravel'), false, actions.setShowTravel);
   bindSwitch($('showExact'), !!actions.exact, actions.setExact);
+  const viewBtns = document.querySelectorAll('[data-view]');
+  const markView = v => viewBtns.forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  markView(actions.viewMode);
+  viewBtns.forEach(b => b.addEventListener('click', () => { markView(b.dataset.view); actions.setViewMode(b.dataset.view); }));
   playBtn.addEventListener('click', actions.togglePlay);
   speed.addEventListener('change', () => actions.setSpeed(+speed.value));
 

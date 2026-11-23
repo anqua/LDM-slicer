@@ -29,17 +29,23 @@ header .btn{white-space:nowrap;flex-shrink:0}
 .opt b{font-weight:600;font-size:13px}
 .opt small{color:var(--muted);font-size:11px;line-height:1.3}
 .row[hidden]{display:none}
+.seg{display:inline-flex}
+.seg .btn{border-radius:0}
+.seg .btn:first-child{border-radius:6px 0 0 6px}
+.seg .btn:last-child{border-radius:0 6px 6px 0;border-left:0}
+.seg .btn.on{border-color:var(--accent);color:var(--accent)}
 
 /* Lab attribution (@A), right end of the header. Same lockup and type as the @A website footer
    (.footer-group-name: Space Grotesk 500, line-height 1.3, white, left-aligned). */
-.lab-block{display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-left:6px;padding-left:14px;
+.lab-block{display:flex;flex-direction:column;align-items:flex-start;gap:4px;flex-shrink:0;margin-left:6px;padding-left:14px;
   border-left:1px solid var(--line)}
 .lab{display:flex;align-items:center;gap:10px;
   color:#fff;text-decoration:none;font-family:"Space Grotesk",system-ui,sans-serif;font-weight:500;
   font-size:13px;line-height:1.3;text-align:left}
-.lab img{width:56px;height:56px;display:block}
+.lab img{width:56px;height:56px;display:block;flex-shrink:0}      /* the logo keeps its size */
 /* When the slicer was last updated, under the logo. */
-.updated{font-size:11px;line-height:1.2;color:var(--muted);font-family:var(--font-mono);white-space:nowrap}
+/* Under the logo, left edge on the logo's. width:0 + min-width:100% keeps it from widening the lockup: the text wraps onto the next line instead. */
+.updated{font-size:11px;line-height:1.25;color:var(--muted);font-family:var(--font-mono);width:0;min-width:100%;overflow-wrap:anywhere}
 .updated[hidden]{display:none}
 
 .app{--side-w:330px;position:relative;display:grid;grid-template-columns:var(--side-w) 1fr;

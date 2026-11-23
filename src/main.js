@@ -43,6 +43,8 @@ const panel = initSlicePanel({
   setShowModel: v => model.setVisible(v),
   setShowTravel: v => toolpath.setShowTravel(v),
   exact: S.gcodeExact,
+  viewMode: S.viewMode,
+  setViewMode(v) { S.viewMode = v; save(); toolpath.setMode(v); },
   setExact(v) {                        // exact G-code view on/off: a view preference, the slice stays
     S.gcodeExact = v; save();
     if (!result) return;
@@ -88,7 +90,8 @@ onFrame(dt => {
 
 /** Draw the current slice: from the exported G-code itself (exact) or from the slicer paths. */
 function showPaths() {
-  if (S.gcodeExact) toolpath.setFromGcode(result.gcode.text, result.tp.layers.length, [0, 0, S.bedZ]);
+  toolpath.setMode(S.viewMode);
+  if (S.gcodeExact) toolpath.setFromGcode(result.gcode.text, result.tp.layers.length, [0, 0, S.bedZ], S);
   else toolpath.set(result.tp, S);
 }
 
