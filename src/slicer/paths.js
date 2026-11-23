@@ -44,6 +44,8 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
   const paths = [];
   const isl = islands(loops);
   const walls = Math.max(1, Math.round(o.walls));
+  // "Infill only": no wall is printed; the infill then reaches the outline (wEff = 0 walls inside it).
+  const wallsOn = o.printParts !== "infill", wEff = wallsOn ? walls : 0;
   // Visit islands nearest-first.
   const todo = [...isl];
   while (todo.length) {
@@ -53,7 +55,7 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
     const bounds = [it.outer, ...it.holes];
 
     const ring = [];                                         // ring[k] = offset loops of wall k
-    for (let k = 0; k < walls; k++) ring.push(bounds.map(b => offset(b, o.lineW * (k + 0.5))).filter(Boolean));
+    for (let k = 0; k < (wallsOn ? walls : 0); k++) ring.push(bounds.map(b => offset(b, o.lineW * (k + 0.5))).filter(Boolean));
     const order = o.wallOrder === 'inner' ? [...ring.keys()].reverse() : [...ring.keys()];
     for (const k of order) for (const loop of ring[k]) {
       const pts = seamLoop(loop, o.seam, pos, rng).map(([x, y]) => [x, y, z]);
@@ -69,7 +71,7 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
       }
     };
     // Region inside the walls, overlapping the innermost wall by 15 % of a line.
-    const inset = o.lineW * (walls + 0.5 - 0.15);
+    const inset = o.lineW * (wEff + 0.5 - 0.15);
     const clipOf = d => bounds.map(b => offset(b, d)).filter(Boolean);
     const usable = c => c.length && c.some(p => area(p) > 0);
 
@@ -81,7 +83,7 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
         // Rings parallel to the outline (and around holes), from the innermost wall inward. Offsets of
         // concave shapes start to cross themselves near the middle: stop there and fill the rest with lines.
         const rings = [];
-        let d = o.lineW * (walls - 0.5) + gap, lastOk = o.lineW * (walls - 0.5);
+        let d = o.lineW * Math.max(0.5, wEff - 0.5) + gap, lastOk = o.lineW * Math.max(0.5, wEff - 0.5);
         for (let k = 0; k < 500; k++, d += gap) {
           const loops = bounds.map(b => offset(b, d)).filter(l => l && Math.abs(area(l)) > gap * gap);
           if (!loops.length || !offset(it.outer, d) || loops.some(selfIntersects)) break;
@@ -111,7 +113,7 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
       case 'zigzag': {
         // Extra inner wall `zigzagWidth` in from the walls; a wave bridges the gap.
         for (const b of bounds) {
-          const { wall, zig } = zigzag(b, o.lineW * (walls - 0.5), Math.max(o.lineW * 2, o.zigzagWidth), sp);
+          const { wall, zig } = zigzag(b, o.lineW * Math.max(0.5, wEff - 0.5), Math.max(o.lineW * 2, o.zigzagWidth), sp);
           if (!wall) continue;
           add('inner', [seamLoop(wall, 'nearest', pos, rng)]);
           const wave = zig.slice(0, -1), r = startAt(wave, pos ? nearestIndex(wave, pos[0], pos[1]) : 0);
@@ -151,7 +153,7 @@ export function buildToolpaths(sliced, o) {
   const warnings = [];
   let seed = 1;
   const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const spiral = o.mode === 'spiral';
+  const spiral = o.mode === 'spiral' && o.printParts !== 'infill';      // infill only needs layers: no spiral
   const bottomN = Math.max(0, Math.round(o.bottomLayers));
   const layers = [];
   let pos = null, multiIsland = false;
@@ -194,6 +196,8 @@ export function buildToolpaths(sliced, o) {
   if (stillOpen) warnings.push(`${stillOpen} layer${stillOpen > 1 ? 's have' : ' has'} an outline that could not be closed (a hole larger than 8 mm). Those layers may print wrongly.`);
   if (multiIsland) warnings.push('Spiral mode prints one outline per layer; some layers have several parts and only the largest is printed.');
   if (spiral && o.walls > 1) warnings.push('Spiral mode always prints a single wall.');
+  if (o.printParts === 'infill' && o.mode === 'spiral') warnings.push('Infill only prints layer by layer, so the spiral mode is ignored.');
+  if (o.printParts === 'infill' && o.infill === 'none') warnings.push('Infill only, but the infill pattern is None: only the bottom layers are printed. Choose an infill pattern.');
   if (spiral && o.infill !== 'none') warnings.push('Infill is only printed in layer-by-layer mode.');
 
   // Speeds: first layer, then bottom infill / normal, capped by the machine; stretched to meet the

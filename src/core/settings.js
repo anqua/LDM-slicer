@@ -11,7 +11,7 @@ const defaults = {};
 for (const group of Object.values(SCHEMA)) for (const f of group) if (f.k) defaults[f.k] = f.def;
 Object.assign(defaults, PRINTERS[DEFAULT_PRINTER].values, { printerPreset: DEFAULT_PRINTER });
 // View preferences. `printerVisible` replaces `showPrinter`, which was force-saved as false on every load.
-Object.assign(defaults, { printerVisible: true, gcodeExact: false, viewMode: "lines" });
+Object.assign(defaults, { printerVisible: true, gcodeExact: false, viewMode: "lines", zones: [] });
 
 // Printer defaults before the WASP preset existed. A saved state with no `printerPreset` key
 // whose printer values all still equal these was never customized: move it to the new default.
@@ -41,6 +41,7 @@ delete S.bedY; delete S.origin; delete S.bedShape;      // rectangular beds remo
 delete S.bottomSpacing;                                  // replaced by bottomSpacingX (× nozzle)
 if (S.bottomFlow === 100) S.bottomFlow = defaults.bottomFlow;   // old default (100 %) -> new default (75 %)
 if (S.firstLayerH === 0.7) S.firstLayerH = defaults.firstLayerH;   // old default (a fixed 0.7 mm) -> follows the layer height
+if (S.modeV2 !== true) { if (S.mode === "spiral") S.mode = defaults.mode; S.modeV2 = true; }   // once: the default path mode is now layer by layer (standard)
 
 // Saved numbers outside a field's min/max (e.g. a 1.2 mm nozzle after the range became 1.5–3) reset to default.
 for (const group of Object.values(SCHEMA)) for (const f of group) {

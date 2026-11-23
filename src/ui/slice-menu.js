@@ -21,6 +21,8 @@ const PICTURES = {
     const y = 62 - i * 4.6;
     return line(path(60, t => [14 + 92 * t, y - 5 * Math.sin(t * Math.PI * 4)]));
   }).join(''),
+  // a different style in each band of height
+  zones: () => Array.from({ length: 9 }, (_, i) => { const y = 60 - i * 6, a = i >= 3 && i <= 5 ? 4 : 0; return line(path(48, t => [14 + 92 * t, y - a * Math.sin(t * Math.PI * 4)])); }).join(''),
   // rows of small loops along the wall
   loops: () => Array.from({ length: 5 }, (_, i) => {
     const y = 58 - i * 11, r = 3.2, p = 9;
@@ -33,6 +35,7 @@ const OPTIONS = [
   { id: 'curved', title: 'Non-planar', text: 'The layers themselves curve: wave, ripple or cone.' },
   { id: 'ruffle', title: 'Ruffled wall', text: 'The wall waves up and down and in and out.' },
   { id: 'loops', title: 'Loop texture', text: 'The wall curls into small loops between two heights.' },
+  { id: 'zones', title: 'Zones', text: 'Different styles at different heights, set in the Zones tab.' },
 ];
 
 /** @param run(nonplanar)  slices; `nonplanar` true uses the style in S.npMode */

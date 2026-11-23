@@ -19,6 +19,9 @@ import { toGcode } from './slicer/gcode.js';
 import { buildNonStandard } from './nonstandard/engine.js';
 import { initSidebarResize } from './ui/sidebar-resize.js';
 import { initSliceMenu } from './ui/slice-menu.js';
+import { initZones } from './ui/zones.js';
+
+let zonesUi = null;                    // the Zones tab (set below); refreshed when the model changes
 import { initVersionStamp } from './ui/version-stamp.js';
 
 const { scene, rig, onFrame } = createViewer(document.getElementById('view'));
@@ -177,6 +180,7 @@ addEventListener('keydown', e => {
 function openModel(geometry, name) {
   invalidate();
   model.load(geometry, name);
+  zonesUi?.refresh();
   panel.setCanSlice(true);
   document.getElementById('empty').style.display = 'none';
   update({ offX: 0, offY: 0 });      // triggers rebuild + status via onChange
@@ -196,6 +200,7 @@ onChange(keys => {
   if (bedChanged || keys.includes('printerPreset')) printer.rebuild();
   if (bedChanged || keys.some(k => TRANSFORM_KEYS.has(k))) model.rebuild();
   renderModelStatus(model.info());
+  if (!keys.every(k => k === 'zones')) zonesUi?.refresh();      // the zones themselves are edited there
   invalidate('Settings changed — slice again.');
 });
 
@@ -204,6 +209,7 @@ initPanels({
     if (!model.loaded) return;
     model.rotate(axis);
     model.rebuild();
+    zonesUi?.refresh();
     invalidate('Model rotated — slice again.');
     renderModelStatus(model.info());
     frameView('iso');
@@ -226,6 +232,21 @@ initPanels({
 initViewControls(rig, frameView);
 initSidebarResize();
 initSliceMenu(runSlice);               // chooser with pictures; sets the style, then slices
+
+/** Silhouette of the model for the Zones tab: the largest distance from the axis in 60 height bins. */
+function modelProfile() {
+  const pos = model.positions(), bb = model.bounds();
+  if (!pos || !bb) return null;
+  const top = bb.max.z, n = 60, r = new Float32Array(n), cx = (bb.min.x + bb.max.x) / 2, cy = (bb.min.y + bb.max.y) / 2;
+  for (let i = 0; i < pos.length; i += 3) {
+    const b = Math.min(n - 1, Math.max(0, Math.floor(pos[i + 2] / top * n))), d = Math.hypot(pos[i] - cx, pos[i + 1] - cy);
+    if (d > r[b]) r[b] = d;
+  }
+  for (let i = 1; i < n; i++) if (!r[i]) r[i] = r[i - 1];
+  for (let i = n - 2; i >= 0; i--) if (!r[i]) r[i] = r[i + 1];
+  return { top, r: Array.from(r) };
+}
+zonesUi = initZones({ profile: modelProfile, slice() { update({ npMode: "zones" }); runSlice(true); } });
 initVersionStamp();                    // async; does not block anything
 initFileInput(openFile);
 document.getElementById('demo').addEventListener('click', () => openModel(demoVaseGeometry(), 'demo-vase.stl'));

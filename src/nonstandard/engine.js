@@ -117,19 +117,39 @@ function densify(pts, step) {
 }
 
 /**
+ * The zones of a slice, in order of height, clipped to the printable wall; zones without a style are plain wall and
+ * are left out. A single-style slice (npMode curved / ruffle / loops) is one zone covering what the old settings
+ * covered, so one code path serves both. `legacy` zones keep their original ramps.
+ * Zone: { style, from, to (mm of height), p: overrides of the settings for this zone }
+ */
+function makeZones(o, top, baseTop) {
+  if (o.npMode !== 'zones') {
+    if (o.npMode === 'loops') return [{ style: 'loops', from: Math.max(baseTop, top * o.lpFrom / 100), to: top * o.lpTo / 100, p: {}, legacy: true }];
+    return [{ style: o.npMode, from: Math.max(o.npBase, baseTop), to: Infinity, p: {}, legacy: true }];
+  }
+  return (o.zones || []).filter(z => z && z.style && z.style !== 'standard')
+    .map(z => ({ style: z.style, from: Math.max(baseTop, +z.from), to: Math.min(top, +z.to), p: z.p || {} }))
+    .filter(z => z.to > z.from + 0.01).sort((p, q) => p.from - q.from);
+}
+
+/**
  * @param pos  triangle soup (world, z up, model on z = 0)
  * @param o    settings (S)
  * @param top  model height
  * @returns { tp, zMax, hop, note }; tp = { layers: [{ z, h, paths }], warnings } like the standard slicer's result;
  *          hop = z-hop that clears the surface texture on travel moves
+ * Style: o.npMode is curved, ruffle, loops (the whole wall above the base) or zones (o.zones: a list of zones).
  */
 export function buildNonStandard(pos, o, top) {
-  const style = o.npMode;
   // The bottom layers are planar (and the standard slicer's): every style starts above them.
   const first = layerList(top, o.firstLayerH || o.layerH, o.layerH);
   const nBase = clamp(Math.round(o.bottomLayers), 0, first.length);
   const baseTop = nBase ? first[nBase - 1].z : 0;
   o = { ...o, npBase: Math.max(o.npBase, baseTop), lpFrom: Math.max(o.lpFrom, baseTop / top * 100) };
+  const zonesMode = o.npMode === 'zones';
+  const zones = makeZones(o, top, baseTop);
+  const zoneAt = z => zones.find(zn => z >= zn.from && z <= zn.to) ?? null;
+  const pOf = zn => ({ ...o, ...zn.p });
   // Axis: the middle of the footprint of the part.
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (let i = 0; i < pos.length; i += 3) { x0 = Math.min(x0, pos[i]); x1 = Math.max(x1, pos[i]); y0 = Math.min(y0, pos[i + 1]); y1 = Math.max(y1, pos[i + 1]); }
@@ -137,11 +157,26 @@ export function buildNonStandard(pos, o, top) {
   let rmax = 1;
   for (let i = 0; i < pos.length; i += 3) rmax = Math.max(rmax, Math.hypot(pos[i] - cx, pos[i + 1] - cy));
 
-  // Curved layers: measure the part in layer space.
+  // Curved layers: measure the part in layer space. All curved zones share the wave of the first one; each has its
+  // own rise and fall (the envelope), flat outside.
   let mesh = pos, warp = null, topL = top;
-  if (style === 'curved') {
-    warp = makeWarp(o, rmax, top);
-    ({ mesh, top: topL } = warpMesh(pos, warp, o.npType === 'cone' ? 80 : o.npLen));
+  const curvedZones = zones.filter(zn => zn.style === 'curved');
+  if (curvedZones.length) {
+    const Zc = pOf(curvedZones[0]);
+    if (!zonesMode) warp = makeWarp(Zc, rmax, top);
+    else {
+      const A = Math.max(0.1, Zc.npAmp);
+      const env = zp => {
+        let m = 0;
+        for (const zn of curvedZones) {
+          const bl = Math.max(1e-6, Math.min(3 * A, (zn.to - zn.from) / 2));
+          m = Math.max(m, smooth((zp - zn.from) / bl) * (1 - smooth((zp - (zn.to - bl)) / bl)));
+        }
+        return m;
+      };
+      warp = makeWarp(Zc, rmax, Infinity, env);
+    }
+    ({ mesh, top: topL } = warpMesh(pos, warp, Zc.npType === 'cone' ? 80 : Zc.npLen));
   }
 
   const layers = layerList(topL, o.firstLayerH || o.layerH, o.layerH);
@@ -170,7 +205,7 @@ export function buildNonStandard(pos, o, top) {
     // The base (priming loops + bottom layers) is the standard slicer's, unchanged and flat: the same
     // walls, patterns, spacing, flow and speeds as a standard slice. The style starts above it.
     const base = sliceMesh(pos, layers.slice(0, bottomN).map(({ z, h }) => ({ z, h })), Math.max(0.02, o.lineW * 0.03));
-    const std = buildToolpaths(base, { ...o, mode: 'layered', infill: 'none' });
+    const std = buildToolpaths(base, { ...o, mode: 'layered', infill: 'none', printParts: 'all' });
     std.layers.forEach((l, i) => out[i].paths.push(...l.paths));
     warnings.push(...std.warnings);
   } else {
@@ -179,33 +214,36 @@ export function buildNonStandard(pos, o, top) {
       out[0].paths.push({ ...flat('skirt', offsetRing(rings[0], -(o.skirtDist + o.lineW * (k + 0.5))), layers[0].z, true), h: layers[0].h });
   }
 
-  // The wall: one helix, a style-shaped point at every step.
-  const lam = Math.max(4, o.rfLen), a = o.rfAmp, b = o.rfRadial;
-  const z0 = Math.max(0, o.npBase), ramp = Math.max(3 * a, 3 * Math.abs(b), 1e-6);   // thickness stays within 50-150 %
-  const loopR = Math.max(0.3, o.lpSize / 2), loopZ = Math.min(loopR, o.layerH * 1.2);
-  const pitch = Math.min(Math.max(1, o.lpSpacing), 5.5 * loopR);                      // pitch < 2π·r, or no loop forms
-  const band = [top * o.lpFrom / 100, top * o.lpTo / 100];
-  const step = style === 'ruffle' ? clamp(lam / 16, 0.5, 2) : style === 'loops' ? Math.min(0.5, pitch / 20) : 1;
-
+  // The wall: one helix. Every turn takes the style of the zone it is in; a point at every step is shaped by it.
   let zMax = 0, continues = false;                    // continues: the previous wall path ended where this turn starts
   for (let i = bottomN; i < nL; i++) {
     const prev = walls[i > 0 ? i - 1 : 0], cur = walls[i], zPrev = i > 0 ? layers[i - 1].z : 0, rise = layers[i].z - zPrev;
+    const zn = zoneAt(zPrev + rise / 2), st = zn ? zn.style : 'standard', Z = zn ? pOf(zn) : o;
+    const a = Z.rfAmp, b = Z.rfRadial, lam = Math.max(4, Z.rfLen);
+    const loopR = Math.max(0.3, Z.lpSize / 2), loopZ = Math.min(loopR, o.layerH * 1.2);
+    const pitch = Math.min(Math.max(1, Z.lpSpacing), 5.5 * loopR);                      // pitch < 2π·r, or no loop forms
+    const step = st === 'ruffle' ? clamp(lam / 16, 0.5, 2) : st === 'loops' ? Math.min(0.5, pitch / 20) : 1;
+    // Ruffle envelope: in over 3 × the larger of height and in/out (thickness stays within 50-150 %), and out again
+    // at the top of a zone, unless the zone runs to the top of the model or is a single-style slice.
+    const bl = st === 'ruffle' ? Math.max(1e-6, Math.min(Math.max(3 * a, 3 * Math.abs(b)), zonesMode ? (zn.to - zn.from) / 2 : Infinity)) : 1;
+    const wR = z => st !== 'ruffle' ? 0 : smooth((z - zn.from) / bl) * (zn.to >= top - 0.01 || zn.legacy ? 1 : 1 - smooth((z - (zn.to - bl)) / bl));
+    const xv = st === 'ruffle' || st === 'curved';        // clay is counted per mm of horizontal advance (gcode.js)
+
     const L = perim[i], M = Math.max(8, Math.ceil(L / step));
     const base = s => {                                                // point on the blended outline at turn fraction s
       const sc = s - Math.floor(s), t = clamp(s, 0, 1), A = sample(prev, sc), B = sample(cur, sc);
       return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, zPrev + rise * t];
     };
-    const inBand = style === 'loops' && zPrev >= band[0] && zPrev <= band[1];
     const nWaves = Math.max(1, Math.round(L / lam)), nLoops = Math.max(1, Math.round(L / pitch));
     const pts = [];
     for (let k = 0; k <= M; k++) {
       const s = k / M;
       let u = s, dz = 0, dn = 0, kap = 1;               // kap: local layer spacing relative to the layer height
-      if (style === 'ruffle') {
-        const sn = Math.sin(TAU * nWaves * s), w = smooth((base(s)[2] - z0) / ramp);
+      if (st === 'ruffle') {
+        const sn = Math.sin(TAU * nWaves * s), zb = base(s)[2], w = wR(zb);
         dz = a * w * sn; dn = b * w * sn;
-        kap = 1 + a * sn * (w - smooth((base(s)[2] - rise - z0) / ramp)) / rise;
-      } else if (inBand) {
+        kap = 1 + a * sn * (w - wR(zb - rise)) / rise;
+      } else if (st === 'loops') {
         const ph = TAU * nLoops * s;
         u = s - loopR / L * Math.sin(ph);
         dz = loopZ * (1 - Math.cos(ph));
@@ -215,18 +253,18 @@ export function buildNonStandard(pos, o, top) {
         const p = base(s - 0.25 / L), q = base(s + 0.25 / L), tx = q[0] - p[0], ty = q[1] - p[1], tl = Math.hypot(tx, ty) || 1;
         x += dn * ty / tl; y -= dn * tx / tl;
       }
-      const P = toWorld(x, y, zl + dz);
+      const pt = toWorld(x, y, zl + dz);
       if (warp) kap = warp.kappa(x, y, zl, rise);
-      if (kap !== 1) P.push(Math.max(0.2, kap));
-      if (P[2] > zMax) zMax = P[2];
-      pts.push(P);
+      pt.push(Math.max(0.2, kap), xv ? 1 : 0);                          // pt[3]: layer spacing factor, pt[4]: 1 = per horizontal mm
+      if (pt[2] > zMax) zMax = pt[2];
+      pts.push(pt);
     }
-    if (!warp) { out[i].paths.push({ type: 'spiral', pts, h: o.layerH, join: i > bottomN, xyVol: style === 'ruffle' }); continue; }
+    if (!warp) { out[i].paths.push({ type: 'spiral', pts, h: o.layerH, join: i > bottomN }); continue; }
     // Curved layers: the part ends at its real top. Where a layer surface rises above it, the path stops and
     // restarts when the surface comes back down (the rim is cut by the layers).
     let run = [], startsAtTurnStart = true;
     const flush = ended => {
-      if (run.length > 1) out[i].paths.push({ type: 'spiral', pts: run, h: o.layerH, xyVol: true, join: i > bottomN && startsAtTurnStart && continues });
+      if (run.length > 1) out[i].paths.push({ type: 'spiral', pts: run, h: o.layerH, join: i > bottomN && startsAtTurnStart && continues });
       if (run.length > 1) continues = ended;
       run = [];
     };
@@ -239,7 +277,12 @@ export function buildNonStandard(pos, o, top) {
   }
 
   // Travel moves to or from the wall lift by the height of the texture (the flat base needs no extra lift).
-  const hop = style === 'curved' ? 2 * warp.A + 1 : style === 'ruffle' ? 2 * (a + Math.abs(b)) + 1 : 2 * loopZ + 1;
+  let hop = 1;
+  for (const zn of zones) {
+    const Z = pOf(zn);
+    hop = Math.max(hop, zn.style === 'curved' ? 2 * warp.A + 1 : zn.style === 'ruffle' ? 2 * (Z.rfAmp + Math.abs(Z.rfRadial)) + 1
+      : 2 * Math.min(Math.max(0.3, Z.lpSize / 2), o.layerH * 1.2) + 1);
+  }
   let firstWall = true;                                // the helix starts at the top of the flat base: no lift needed to reach it
   for (const l of out) for (const p of l.paths) if (p.type === 'spiral') { p.hop = firstWall ? 0 : hop; firstWall = false; }
 
@@ -266,10 +309,9 @@ export function buildNonStandard(pos, o, top) {
     const slope = Math.atan(warp.maxSlope) * 180 / Math.PI;
     if (slope > 30) warnings.push(`Steepest layer slope is ${slope.toFixed(0)}°. Above about 30° the nozzle body may touch the print. Lower the amplitude or lengthen the wavelength.`);
   }
-  if (style === 'ruffle') {
-    const slope = Math.atan(a * TAU / lam) * 180 / Math.PI;
-    if (slope > 40) warnings.push(`The ruffled wall climbs at up to ${slope.toFixed(0)}°, which clay may not hold and the nozzle body may touch. Lower the wave height or lengthen the wavelength.`);
-  }
+  let worstRuffle = 0;
+  for (const zn of zones) if (zn.style === 'ruffle') { const Z = pOf(zn); worstRuffle = Math.max(worstRuffle, Math.atan(Z.rfAmp * TAU / Math.max(4, Z.rfLen)) * 180 / Math.PI); }
+  if (worstRuffle > 40) warnings.push(`The ruffled wall climbs at up to ${worstRuffle.toFixed(0)}°, which clay may not hold and the nozzle body may touch. Lower the wave height or lengthen the wavelength.`);
   if (warp && warp.reduced) warnings.push(`The model is short for this wave: amplitude reduced to ${warp.A.toFixed(1)} mm (the wave ramps in and out over 3 × amplitude, above the flat base and below the top).`);
   if (warp) {                                          // how far the wall leans out over the one below, in real space
     let n = 0, over = 0, worst = 0;
@@ -282,13 +324,21 @@ export function buildNonStandard(pos, o, top) {
     if (over / n > 0.05) warnings.push(`${(100 * over / n).toFixed(0)} % of the wall leans more than 40° over the layer below (up to ${worst.toFixed(0)}°): the clay may sag. Lower the amplitude or lengthen the wavelength.`);
   }
   if (zMax > o.bedZ) warnings.push(`The print reaches Z ${zMax.toFixed(0)} mm, above the ${o.bedZ} mm build height.`);
-  if (style === 'loops' && o.lpSpacing > 5.5 * loopR) warnings.push(`Loop spacing reduced to ${(5.5 * loopR).toFixed(1)} mm so the path forms loops at this size.`);
-  if (style === 'loops' && o.lpFrom >= o.lpTo) warnings.push('Loop texture: "from" must be below "to".');
+  for (const zn of zones) if (zn.style === 'loops') {
+    const Z = pOf(zn);
+    if (Z.lpSpacing > 5.5 * Math.max(0.3, Z.lpSize / 2)) { warnings.push(`Loop spacing reduced to ${(5.5 * Math.max(0.3, Z.lpSize / 2)).toFixed(1)} mm so the path forms loops at this size.`); break; }
+  }
+  if (!zonesMode && o.npMode === 'loops' && o.lpFrom >= o.lpTo) warnings.push('Loop texture: "from" must be below "to".');
+  if (zonesMode && !zones.length) warnings.push('No zone has a style: nothing differs from a standard spiral. Add a zone with a style.');
 
-  const notes = {
-    curved: `curved layers: ${o.npType}, amplitude ${o.npAmp} mm, wavelength ${o.npLen} mm, direction ${o.npAngle}°, flat base ${o.npBase} mm`,
-    ruffle: `ruffled wall: amplitude ${o.rfAmp} mm, wavelength ${o.rfLen} mm, in/out ${o.rfRadial} mm, flat base ${o.npBase} mm`,
-    loops: `loop texture: loop Ø ${o.lpSize} mm, spacing ${o.lpSpacing} mm, from ${o.lpFrom} % to ${o.lpTo} % of the height`,
+  const describe = zn => {
+    const Z = pOf(zn);
+    return zn.style === 'curved' ? `curved layers (${Z.npType}, amplitude ${Z.npAmp} mm, wavelength ${Z.npLen} mm, direction ${Z.npAngle}°)`
+      : zn.style === 'ruffle' ? `ruffled wall (amplitude ${Z.rfAmp} mm, wavelength ${Z.rfLen} mm, in/out ${Z.rfRadial} mm)`
+      : `loop texture (loop Ø ${Z.lpSize} mm, spacing ${Z.lpSpacing} mm)`;
   };
-  return { tp: { layers: out, warnings }, zMax, hop, note: `Non-standard slice, ${notes[style]}` };
+  const note = zonesMode
+    ? `Non-standard slice, zones: ${zones.map(zn => `${zn.from.toFixed(0)}–${Math.min(zn.to, top).toFixed(0)} mm ${describe(zn)}`).join('; ') || 'none'}`
+    : `Non-standard slice, ${zones.length ? describe(zones[0]) : o.npMode}${o.npMode === 'loops' ? `, from ${o.lpFrom} % to ${o.lpTo} % of the height` : `, flat base ${o.npBase} mm`}`;
+  return { tp: { layers: out, warnings }, zMax, hop, note };
 }

@@ -12,7 +12,8 @@
 const smooth = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
 /** The warp for settings `o`; `rmax` = largest distance of the model from the axis (cone only). */
-export function makeWarp(o, rmax = 100, top = Infinity) {
+/** @param env  optional envelope zp -> 0..1 replacing the default ramps (zones: one rising and falling ramp per curved zone) */
+export function makeWarp(o, rmax = 100, top = Infinity, env = null) {
   const z0 = Math.max(0, o.npBase);
   // The effect ramps in above the flat base and back out below the top, so the rim is flat and the last layers
   // are not cut into short sideways arcs. Both ramps are 3·A tall; on a short model A is reduced to fit.
@@ -24,7 +25,7 @@ export function makeWarp(o, rmax = 100, top = Infinity) {
     : o.npType === 'cone' ? (x, y) => 1 - Math.min(1, Math.hypot(x, y) / Math.max(1, rmax))
     : (x, y) => Math.sin(k * (x * cx + y * cy));
   const ramp = Math.max(3 * A, 1e-6);
-  const w = zp => smooth((zp - z0) / ramp) * (1 - smooth((zp - (top - ramp)) / ramp));   // 0 at the base and at the top
+  const w = env ?? (zp => smooth((zp - z0) / ramp) * (1 - smooth((zp - (top - ramp)) / ramp)));   // 0 at the base and at the top
   const maxSlope = o.npType === 'cone' ? A / Math.max(1, rmax) : A * k;      // steepest rise per mm
   return {
     A, z0, ramp, maxSlope, reduced: A < o.npAmp,

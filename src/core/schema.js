@@ -41,8 +41,11 @@ export const SCHEMA = {
       help: 'Typically 50–70 % of nozzle diameter for clay.' },
     { k: 'lineW', label: 'Line width', unit: 'mm', def: 1.4, step: 0.1,        // ≈120 % of the 1.2 mm WASP nozzle
       help: 'Typically 110–130 % of nozzle diameter.' },
-    { k: 'mode', label: 'Path mode', type: 'select', def: 'spiral',
-      opts: [['spiral', 'Spiral vase (continuous)'], ['layered', 'Layer by layer']] },
+    { k: 'mode', label: 'Path mode', type: 'select', def: 'layered',
+      opts: [['layered', 'Layer by layer (standard)'], ['spiral', 'Spiral vase (continuous)']] },
+    { k: 'printParts', label: 'Print', type: 'select', def: 'all',
+      opts: [['all', 'Walls and infill'], ['infill', 'Infill only (no walls)']],
+      help: 'Infill only prints the infill and the bottom layers, without the outer walls; the infill then reaches the outline. Layer by layer only, and it needs an infill pattern.' },
     { h: 'Walls' },
     { k: 'walls', label: 'Wall count', def: 1, step: 1, help: 'Spiral mode always uses 1 wall.' },
     { k: 'wallOrder', label: 'Wall order', type: 'select', def: 'outer',
@@ -108,7 +111,7 @@ export const SCHEMA = {
     // is only shown while that setting has one of these values.
     { h: 'Non-standard slice' },
     { k: 'npMode', label: 'Style', type: 'select', def: 'curved',
-      opts: [['curved', 'Curved layers (non-planar)'], ['ruffle', 'Ruffled wall'], ['loops', 'Loop texture']],
+      opts: [['curved', 'Curved layers (non-planar)'], ['ruffle', 'Ruffled wall'], ['loops', 'Loop texture'], ['zones', 'Zones (Zones tab)']],
       help: 'Also chosen from the Slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: the wall waves up and down and in and out as it goes round. Loop texture: the wall path curls into small loops between two heights.' },
     { k: 'npType', label: 'Layer shape', type: 'select', def: 'wave', dep: ['npMode', ['curved']],
       opts: [['wave', 'Wave (sine across the part)'], ['ripple', 'Ripple (rings from the center)'], ['cone', 'Cone (center higher)']],

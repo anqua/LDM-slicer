@@ -19,7 +19,7 @@ function chains(layers) {
   const out = [];
   layers.forEach((l, li) => {
     for (const p of l.paths) {
-      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h * (q[3] ?? 1), speed: p.speed, fm: p.flow ?? 1, li }));   // q[3]: local layer spacing, relative; li: layer of this point
+      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h * (q[3] ?? 1), speed: p.speed, fm: p.flow ?? 1, li, xv: q[4] === 1 || !!p.xyVol }));   // q[3]: local layer spacing, relative; li: layer of this point
       const last = out.at(-1);
       if (p.join && last) last.pts.push(...pts.slice(1));
       else out.push({ type: p.type, layer: li, pts, xyVol: !!p.xyVol, hop: p.hop ?? 0 });
@@ -51,7 +51,7 @@ function shape(pts, o) {
     while (i < cum.length - 1 && cum[i] < d) i++;
     const t = cum[i] === cum[i - 1] ? 0 : (d - cum[i - 1]) / (cum[i] - cum[i - 1]);
     const p = pts[i - 1], q = pts[i];
-    return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t, h: q.h, speed: q.speed, fm: q.fm, li: q.li };
+    return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t, h: q.h, speed: q.speed, fm: q.fm, li: q.li, xv: q.xv };
   };
 
   const moves = [];
@@ -140,7 +140,7 @@ export function toGcode(tp, o, meta = {}) {
       }
       // xyVol paths (non-standard, inclined walls): clay per mm of horizontal advance, because the layers stay one
       // layer height apart vertically, so a bead on a slope is longer but thinner.
-      const vlen = c.xyVol ? Math.hypot(m.x - pos.x, m.y - pos.y) : m.len;
+      const vlen = m.xv ? Math.hypot(m.x - pos.x, m.y - pos.y) : m.len;
       const v = vlen * beadArea(o.lineW, m.h) * flow * m.flow * (m.fm ?? 1);   // fm: per-path multiplier (bottom flow)
       const parts = [`X${f3(m.x)}`, `Y${f3(m.y)}`];
       if (Math.abs(m.z - pos.z) > 1e-4) parts.push(`Z${f3(m.z)}`);
@@ -157,7 +157,7 @@ export function toGcode(tp, o, meta = {}) {
     meta.modelName ? `; Model: ${meta.modelName}` : null,
     `; Printer: ${o.printerName} (${o.flavor})`,
     `; Nozzle: ${o.nozzle} mm · line width ${o.lineW} mm · layer ${o.layerH} mm · first layer ${o.firstLayerH || o.layerH} mm`,
-    `; Mode: ${o.mode === 'spiral' ? 'spiral vase' : `layer by layer, ${o.walls} wall(s)`} · bottom layers ${o.bottomLayers}`,
+    `; Mode: ${o.mode === 'spiral' && o.printParts !== 'infill' ? 'spiral vase' : o.printParts === 'infill' ? 'layer by layer, infill only (no walls)' : `layer by layer, ${o.walls} wall(s)`} · bottom layers ${o.bottomLayers}`,
     meta.note ? `; ${meta.note}` : null,
     `; Bottom infill: ${o.bottomPattern} · ${o.bottomAngle}° · spacing ${o.bottomSpacingX} × nozzle = ${f3(o.bottomSpacingX * o.nozzle)} mm · flow ${o.bottomFlow} % · ${o.bottomSpeed} mm/s`,
     `; E: ${o.eMode === 'volumetric' ? 'volume (mm³)' : `virtual filament Ø${o.filDia} mm`} · flow ${o.flow} %`,
