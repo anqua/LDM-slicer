@@ -200,10 +200,11 @@ export function buildNonStandard(pos, o, top) {
     const pts = [];
     for (let k = 0; k <= M; k++) {
       const s = k / M;
-      let u = s, dz = 0, dn = 0;
+      let u = s, dz = 0, dn = 0, kap = 1;               // kap: local layer spacing relative to the layer height
       if (style === 'ruffle') {
         const sn = Math.sin(TAU * nWaves * s), w = smooth((base(s)[2] - z0) / ramp);
         dz = a * w * sn; dn = b * w * sn;
+        kap = 1 + a * sn * (w - smooth((base(s)[2] - rise - z0) / ramp)) / rise;
       } else if (inBand) {
         const ph = TAU * nLoops * s;
         u = s - loopR / L * Math.sin(ph);
@@ -215,15 +216,17 @@ export function buildNonStandard(pos, o, top) {
         x += dn * ty / tl; y -= dn * tx / tl;
       }
       const P = toWorld(x, y, zl + dz);
+      if (warp) kap = warp.kappa(x, y, zl, rise);
+      if (kap !== 1) P.push(Math.max(0.2, kap));
       if (P[2] > zMax) zMax = P[2];
       pts.push(P);
     }
-    if (!warp) { out[i].paths.push({ type: 'spiral', pts, h: o.layerH, join: i > bottomN }); continue; }
+    if (!warp) { out[i].paths.push({ type: 'spiral', pts, h: o.layerH, join: i > bottomN, xyVol: style === 'ruffle' }); continue; }
     // Curved layers: the part ends at its real top. Where a layer surface rises above it, the path stops and
     // restarts when the surface comes back down (the rim is cut by the layers).
     let run = [], startsAtTurnStart = true;
     const flush = ended => {
-      if (run.length > 1) out[i].paths.push({ type: 'spiral', pts: run, h: o.layerH, join: i > bottomN && startsAtTurnStart && continues });
+      if (run.length > 1) out[i].paths.push({ type: 'spiral', pts: run, h: o.layerH, xyVol: true, join: i > bottomN && startsAtTurnStart && continues });
       if (run.length > 1) continues = ended;
       run = [];
     };
@@ -250,6 +253,10 @@ export function buildNonStandard(pos, o, top) {
   if (warp) {
     const slope = Math.atan(warp.maxSlope) * 180 / Math.PI;
     if (slope > 30) warnings.push(`Steepest layer slope is ${slope.toFixed(0)}°. Above about 30° the nozzle body may touch the print. Lower the amplitude or lengthen the wavelength.`);
+  }
+  if (style === 'ruffle') {
+    const slope = Math.atan(a * TAU / lam) * 180 / Math.PI;
+    if (slope > 40) warnings.push(`The ruffled wall climbs at up to ${slope.toFixed(0)}°, which clay may not hold and the nozzle body may touch. Lower the wave height or lengthen the wavelength.`);
   }
   if (zMax > o.bedZ) warnings.push(`The print reaches Z ${zMax.toFixed(0)} mm, above the ${o.bedZ} mm build height.`);
   if (style === 'loops' && o.lpSpacing > 5.5 * loopR) warnings.push(`Loop spacing reduced to ${(5.5 * loopR).toFixed(1)} mm so the path forms loops at this size.`);

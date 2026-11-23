@@ -19,10 +19,10 @@ function chains(layers) {
   const out = [];
   layers.forEach((l, li) => {
     for (const p of l.paths) {
-      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h, speed: p.speed, fm: p.flow ?? 1 }));
+      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h * (q[3] ?? 1), speed: p.speed, fm: p.flow ?? 1 }));   // q[3]: local layer spacing, relative
       const last = out.at(-1);
       if (p.join && last) last.pts.push(...pts.slice(1));
-      else out.push({ type: p.type, layer: li, pts });
+      else out.push({ type: p.type, layer: li, pts, xyVol: !!p.xyVol });
     }
   });
   return out;
@@ -130,7 +130,10 @@ export function toGcode(tp, o, meta = {}) {
     primed = true;
 
     for (const m of shape(c.pts, o)) {
-      const v = m.len * beadArea(o.lineW, m.h) * flow * m.flow * (m.fm ?? 1);   // fm: per-path multiplier (bottom flow)
+      // xyVol paths (non-standard, inclined walls): clay per mm of horizontal advance, because the layers stay one
+      // layer height apart vertically, so a bead on a slope is longer but thinner.
+      const vlen = c.xyVol ? Math.hypot(m.x - pos.x, m.y - pos.y) : m.len;
+      const v = vlen * beadArea(o.lineW, m.h) * flow * m.flow * (m.fm ?? 1);   // fm: per-path multiplier (bottom flow)
       const parts = [`X${f3(m.x)}`, `Y${f3(m.y)}`];
       if (Math.abs(m.z - pos.z) > 1e-4) parts.push(`Z${f3(m.z)}`);
       parts.push(`E${f5(eFor(v))}`);

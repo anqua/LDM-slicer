@@ -26,6 +26,8 @@ export function makeWarp(o, rmax = 100) {
     A, z0, ramp, maxSlope,
     /** actual height of the point (x, y) on the layer surface of nominal height zp */
     toWorld: (x, y, zp) => zp + A * g(x, y) * w(zp),
+    /** local layer spacing at (x, y), relative to the nominal layer height `rise` (= dz_world / dz_layer) */
+    kappa: (x, y, zp, rise) => 1 + A * g(x, y) * (w(zp) - w(zp - rise)) / rise,
     /** nominal height of the layer surface through (x, y, z): solves zp + A·g·w(zp) = z by bisection */
     toLayer(x, y, z) {
       const a = A * g(x, y);
