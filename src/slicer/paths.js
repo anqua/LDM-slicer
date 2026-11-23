@@ -32,6 +32,23 @@ function seamLoop(loop, seam, pos, rng) {
 }
 
 
+/** True when a closed polygon's edges cross each other (non-adjacent edges only). */
+function selfIntersects(p) {
+  const n = p.length;
+  const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  for (let i = 0; i < n; i++) {
+    const a = p[i], b = p[(i + 1) % n];
+    const x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), y0 = Math.min(a[1], b[1]), y1 = Math.max(a[1], b[1]);
+    for (let j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue;                     // edges sharing the closing vertex
+      const c = p[j], d = p[(j + 1) % n];
+      if (Math.max(c[0], d[0]) < x0 || Math.min(c[0], d[0]) > x1 || Math.max(c[1], d[1]) < y0 || Math.min(c[1], d[1]) > y1) continue;
+      if (cross(a, b, c) * cross(a, b, d) < 0 && cross(c, d, a) * cross(c, d, b) < 0) return true;
+    }
+  }
+  return false;
+}
+
 /** Walls and (optionally) solid fill for one layer in layer-by-layer mode. */
 function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
   const paths = [];
@@ -67,8 +84,35 @@ function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
     const usable = c => c.length && c.some(p => area(p) > 0);
 
     if (solid) {
-      const clip = clipOf(inset);
-      if (usable(clip)) add('bottom', orderLines(fillLines(clip, o.infillAngle + (layerIdx % 2 ? 90 : 0), o.lineW), pos, o.lineW * 2.5));
+      // Bottom layers: own pattern, angle and spacing (Bottom layers settings).
+      const gap = Math.max(o.lineW * 0.5, o.bottomSpacing || o.lineW);
+      const joinDist = Math.max(o.lineW * 2.5, gap * 1.2);
+      if (o.bottomPattern === 'concentric') {
+        // Rings parallel to the outline (and around holes), from the innermost wall inward. Offsets of
+        // concave shapes start to cross themselves near the middle: stop there and fill the rest with lines.
+        const rings = [];
+        let d = o.lineW * (walls - 0.5) + gap, lastOk = o.lineW * (walls - 0.5);
+        for (let k = 0; k < 500; k++, d += gap) {
+          const loops = bounds.map(b => offset(b, d)).filter(l => l && Math.abs(area(l)) > gap * gap);
+          if (!loops.length || !offset(it.outer, d) || loops.some(selfIntersects)) break;
+          for (const l of loops) {
+            const r = pos ? startAt(l, nearestIndex(l, pos[0], pos[1])) : l;
+            rings.push([...r, r[0]]);
+          }
+          lastOk = d;
+        }
+        add('bottom', orderLines(rings, pos, o.lineW * 1.5));
+        const core = clipOf(lastOk + gap * 0.85);
+        if (usable(core)) add('bottom', orderLines(fillLines(core, o.bottomAngle, gap), pos, joinDist));
+      } else {
+        const clip = clipOf(inset);
+        if (usable(clip)) {
+          const a = o.bottomAngle + (o.bottomPattern === 'lines' && layerIdx % 2 ? 90 : 0);
+          const segs = fillLines(clip, a, gap);
+          if (o.bottomPattern === 'grid') segs.push(...fillLines(clip, a + 90, gap));
+          add('bottom', orderLines(segs, pos, joinDist));
+        }
+      }
       continue;
     }
 
@@ -172,10 +216,15 @@ export function buildToolpaths(sliced, o) {
   if (spiral && o.walls > 1) warnings.push('Spiral mode always prints a single wall.');
   if (spiral && o.infill !== 'none') warnings.push('Infill is only printed in layer-by-layer mode.');
 
-  // Speeds: first layer, then normal, capped by the machine; stretched to meet the min layer time.
+  // Speeds: first layer, then bottom infill / normal, capped by the machine; stretched to meet the
+  // min layer time. Bottom infill also carries its own flow multiplier (applied in gcode.js).
+  const bottomFlow = (o.bottomFlow ?? 100) / 100;
   layers.forEach((l, i) => {
-    const base = Math.min(i === 0 ? o.firstSpeed : o.speed, o.maxSpeed);
-    for (const p of l.paths) p.speed = base;
+    for (const p of l.paths) {
+      const s = i === 0 ? o.firstSpeed : p.type === 'bottom' ? (o.bottomSpeed ?? o.speed) : o.speed;
+      p.speed = Math.min(s, o.maxSpeed);
+      if (p.type === 'bottom') p.flow = bottomFlow;
+    }
     if (o.minLayerTime > 0) {
       const t = l.paths.reduce((a, p) => a + pathLen(p.pts) / p.speed, 0);
       if (t > 0 && t < o.minLayerTime) for (const p of l.paths) p.speed = Math.max(2, p.speed * t / o.minLayerTime);

@@ -19,7 +19,7 @@ function chains(layers) {
   const out = [];
   layers.forEach((l, li) => {
     for (const p of l.paths) {
-      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h, speed: p.speed }));
+      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h, speed: p.speed, fm: p.flow ?? 1 }));
       const last = out.at(-1);
       if (p.join && last) last.pts.push(...pts.slice(1));
       else out.push({ type: p.type, layer: li, pts });
@@ -51,7 +51,7 @@ function shape(pts, o) {
     while (i < cum.length - 1 && cum[i] < d) i++;
     const t = cum[i] === cum[i - 1] ? 0 : (d - cum[i - 1]) / (cum[i] - cum[i - 1]);
     const p = pts[i - 1], q = pts[i];
-    return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t, h: q.h, speed: q.speed };
+    return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, z: p.z + (q.z - p.z) * t, h: q.h, speed: q.speed, fm: q.fm };
   };
 
   const moves = [];
@@ -130,7 +130,7 @@ export function toGcode(tp, o, meta = {}) {
     primed = true;
 
     for (const m of shape(c.pts, o)) {
-      const v = m.len * beadArea(o.lineW, m.h) * flow * m.flow;
+      const v = m.len * beadArea(o.lineW, m.h) * flow * m.flow * (m.fm ?? 1);   // fm: per-path multiplier (bottom flow)
       const parts = [`X${f3(m.x)}`, `Y${f3(m.y)}`];
       if (Math.abs(m.z - pos.z) > 1e-4) parts.push(`Z${f3(m.z)}`);
       parts.push(`E${f5(eFor(v))}`);
@@ -147,6 +147,7 @@ export function toGcode(tp, o, meta = {}) {
     `; Printer: ${o.printerName} (${o.flavor})`,
     `; Nozzle: ${o.nozzle} mm · line width ${o.lineW} mm · layer ${o.layerH} mm · first layer ${o.firstLayerH} mm`,
     `; Mode: ${o.mode === 'spiral' ? 'spiral vase' : `layer by layer, ${o.walls} wall(s)`} · bottom layers ${o.bottomLayers}`,
+    `; Bottom infill: ${o.bottomPattern} · ${o.bottomAngle}° · spacing ${o.bottomSpacing} mm · flow ${o.bottomFlow} % · ${o.bottomSpeed} mm/s`,
     `; E: ${o.eMode === 'volumetric' ? 'volume (mm³)' : `virtual filament Ø${o.filDia} mm`} · flow ${o.flow} %`,
     `; Priming loops: ${o.skirtLoops} at ${o.skirtDist} mm · pre-fill ${o.preFill} mm`,
     `; Safe start: ${o.safeStartLen} mm at ${o.safeStartSpeed} mm/s · safe end: ${o.safeEndLen} mm at ${o.safeEndSpeed} mm/s to ${o.safeEndFlow} % flow`,
