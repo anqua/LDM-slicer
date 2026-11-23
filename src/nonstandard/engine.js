@@ -243,6 +243,13 @@ export function buildNonStandard(pos, o, top) {
   let firstWall = true;                                // the helix starts at the top of the flat base: no lift needed to reach it
   for (const l of out) for (const p of l.paths) if (p.type === 'spiral') { p.hop = firstWall ? 0 : hop; firstWall = false; }
 
+  // Real height range of each layer (a curved layer is not at one Z): shown by the layer slider.
+  for (const l of out) {
+    let lo = Infinity, hi = -Infinity;
+    for (const p of l.paths) if (p.type === 'spiral') for (const q of p.pts) { if (q[2] < lo) lo = q[2]; if (q[2] > hi) hi = q[2]; }
+    if (hi > lo) { l.zMin = lo; l.zMax = hi; }
+  }
+
   // Speeds (first layer, bottom, normal; capped by the machine) and the bottom flow multiplier.
   const bottomFlow = (o.bottomFlow ?? 75) / 100;
   out.forEach((l, i) => {

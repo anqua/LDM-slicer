@@ -41,7 +41,7 @@ export function initSlicePanel(actions) {
 
   const showLabel = n => {
     const l = layers[n - 1];
-    label.textContent = l ? `${n} / ${layers.length} · Z ${l.z.toFixed(2)}` : '';
+    label.textContent = !l ? "" : `${n} / ${layers.length} · Z ${l.zMax - l.zMin > 0.5 ? l.zMin.toFixed(1) + "–" + l.zMax.toFixed(1) : l.z.toFixed(2)}`;
   };
   slider.addEventListener('input', () => { showLabel(+slider.value); actions.scrubLayer(+slider.value); });
   addEventListener('keydown', e => {
