@@ -27,12 +27,11 @@ function bindSwitch(btn, initial, onToggle) {
  * }
  */
 export function initSlicePanel(actions) {
-  const sliceBtn = $('slice'), exportBtn = $('export'), bar = $('slicebar'), info = $('sliceInfo');
+  const exportBtn = $('export'), bar = $('slicebar'), info = $('sliceInfo');
   const slider = $('layer'), label = $('layerLabel'), playBtn = $('play'), speed = $('simSpeed'), time = $('simTime');
   let layers = [], total = 0;
 
   const npBtn = $('sliceNP');
-  sliceBtn.addEventListener('click', () => actions.slice(false));
   exportBtn.addEventListener('click', actions.exportGcode);
   const modelSw = bindSwitch($('showModel'), false, actions.setShowModel);
   bindSwitch($('showTravel'), false, actions.setShowTravel);
@@ -62,14 +61,12 @@ export function initSlicePanel(actions) {
   return {
     /** Enable Slice when a model is loaded. */
     setCanSlice(v) {
-      sliceBtn.disabled = npBtn.disabled = !v;
-      sliceBtn.title = v ? 'Slice the model (S)' : 'Load a model first';
-      npBtn.title = v ? 'Choose how to slice: standard, non-planar, ruffled wall, loop texture' : 'Load a model first';
+      npBtn.disabled = !v;
+      npBtn.title = v ? 'Choose how to slice: standard, non-planar, ruffled wall, loop texture (S = standard)' : 'Load a model first';
     },
     busy(v, np = false) {
-      sliceBtn.textContent = v && !np ? 'Slicing…' : 'Slice';
-      npBtn.textContent = v && np ? 'Slicing…' : 'Non-standard slice ▾';
-      sliceBtn.disabled = npBtn.disabled = v;
+      npBtn.textContent = v ? 'Slicing…' : 'Slice ▾';
+      npBtn.disabled = v;
     },
     get speed() { return +speed.value; },
 

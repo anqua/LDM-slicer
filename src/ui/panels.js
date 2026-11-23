@@ -95,7 +95,7 @@ export function initPanels(actions) {
   });
   initInfillPreview();
   $('autoFromNozzle').addEventListener('click', () =>
-    update({ layerH: +(S.nozzle * 0.6).toFixed(2), lineW: +(S.nozzle * 1.2).toFixed(2) }));
+    update({ layerH: +(S.nozzle * 0.6).toFixed(2), lineW: +(S.nozzle * 1.2).toFixed(2), firstLayerH: 0 }));
 
   initTabs();
 }

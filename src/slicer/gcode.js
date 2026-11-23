@@ -151,7 +151,7 @@ export function toGcode(tp, o, meta = {}) {
     `; Date: ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`,
     meta.modelName ? `; Model: ${meta.modelName}` : null,
     `; Printer: ${o.printerName} (${o.flavor})`,
-    `; Nozzle: ${o.nozzle} mm · line width ${o.lineW} mm · layer ${o.layerH} mm · first layer ${o.firstLayerH} mm`,
+    `; Nozzle: ${o.nozzle} mm · line width ${o.lineW} mm · layer ${o.layerH} mm · first layer ${o.firstLayerH || o.layerH} mm`,
     `; Mode: ${o.mode === 'spiral' ? 'spiral vase' : `layer by layer, ${o.walls} wall(s)`} · bottom layers ${o.bottomLayers}`,
     meta.note ? `; ${meta.note}` : null,
     `; Bottom infill: ${o.bottomPattern} · ${o.bottomAngle}° · spacing ${o.bottomSpacingX} × nozzle = ${f3(o.bottomSpacingX * o.nozzle)} mm · flow ${o.bottomFlow} % · ${o.bottomSpeed} mm/s`,

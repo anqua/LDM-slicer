@@ -91,8 +91,8 @@ export const SCHEMA = {
     { k: 'skirtLoops', label: 'Priming loops (skirt)', def: 1, step: 1,
       help: 'Loops around the part before it starts, so clay is flowing evenly. 0 = none.' },
     { k: 'skirtDist', label: 'Priming loop distance', unit: 'mm', def: 10 },
-    { k: 'firstLayerH', label: 'First layer height', unit: 'mm', def: 0.7, step: 0.1,
-      help: 'Often a little thicker than the other layers so it grips the bed.' },
+    { k: 'firstLayerH', label: 'First layer height', unit: 'mm', def: 0, step: 0.1, min: 0, max: 10,
+      help: '0 = same as the layer height (recommended). A first layer much thinner than the others squashes the clay under the nozzle and over-fills it: a 3 mm nozzle at 0.7 mm squeezes a 3.6 mm line out sideways.' },
     { k: 'preFill', label: 'Pre-fill', unit: 'mm', def: 2, step: 0.5,
       help: 'Clay pushed out in place before the first move, as mm of bead. Builds pressure; useful for big nozzles. 0 = off.' },
     { k: 'safeStartLen', label: 'Safe start length', unit: 'mm', def: 6,
@@ -104,12 +104,12 @@ export const SCHEMA = {
     { k: 'safeEndSpeed', label: 'Safe end speed', unit: 'mm/s', def: 12 },
     { k: 'safeEndFlow', label: 'Safe end final flow', unit: '%', def: 60,
       help: 'Flow at the very end of a path; it ramps down to this from full flow.' },
-    // Used by the Non-standard slice button (src/nonstandard/). `dep`: [key, values]: the row
+    // Used by the Slice button's non-standard styles (src/nonstandard/). `dep`: [key, values]: the row
     // is only shown while that setting has one of these values.
     { h: 'Non-standard slice' },
     { k: 'npMode', label: 'Style', type: 'select', def: 'curved',
       opts: [['curved', 'Curved layers (non-planar)'], ['ruffle', 'Ruffled wall'], ['loops', 'Loop texture']],
-      help: 'Also selectable next to the Non-standard slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: the wall waves up and down and in and out as it goes round. Loop texture: the wall path curls into small loops between two heights.' },
+      help: 'Also chosen from the Slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: the wall waves up and down and in and out as it goes round. Loop texture: the wall path curls into small loops between two heights.' },
     { k: 'npType', label: 'Layer shape', type: 'select', def: 'wave', dep: ['npMode', ['curved']],
       opts: [['wave', 'Wave (sine across the part)'], ['ripple', 'Ripple (rings from the center)'], ['cone', 'Cone (center higher)']],
       help: 'Shape of the layers. Wave: straight ridges across the part. Ripple: concentric rings. Cone: layers rise toward the center by the amplitude.' },
