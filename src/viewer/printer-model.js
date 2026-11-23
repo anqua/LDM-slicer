@@ -132,13 +132,16 @@ export function createPrinterModel(scene) {
           const s = i ? -1 : 1;
           e.set(ex, ey, ea).addScaledVector(t.side, s);
           k.set(kx, ky, carZ).addScaledVector(t.side, s);
-          // Carriage end: a flat rod end meets the carriage's vertical face and its rim would dig in by r·sin φ
-          // (φ = angle between the rod and the face normal, facing along ±(cos a, sin a)). Back it off by r·tan φ
-          // so the rim just touches the face. The effector end sits above the plate's top face (ea), where the
-          // rod cannot reach into the plate however steep it is (a steep rod beside a vertical face would).
+          // The rods are not capped at the faces: they run on straight into the carriage and into the head plate and
+          // end inside them, where they are hidden, so each joint is a cylinder entering a solid (no flat rod end
+          // showing). The joints above are where the arms would meet the faces; the lengths barely change.
+          e.x -= Math.cos(t.a) * 8; e.y -= Math.sin(t.a) * 8;           // enter the plate's top face 8 mm inside its edge, clear of the side face
           axis.subVectors(e, k).normalize();                             // carriage -> effector
-          const c = Math.max(0.2, -(axis.x * Math.cos(t.a) + axis.y * Math.sin(t.a)));   // cos φ
-          k.addScaledVector(axis, ROD_R * Math.sqrt(1 - c * c) / c);
+          const c = Math.max(0.2, -(axis.x * Math.cos(t.a) + axis.y * Math.sin(t.a)));   // how squarely the rod meets the carriage face
+          // Into the carriage up to its middle, but not out through its top (a steep rod rises quickly).
+          const inC = Math.min(carD / 2 / c, (carH / 2 - ROD_R) / Math.max(Math.abs(axis.z), 1e-3));
+          k.addScaledVector(axis, -inC);
+          e.addScaledVector(axis, 10);                                   // 10 mm down into the plate (14 mm thick)
           setRod(arm, e, k);
         });
       }
