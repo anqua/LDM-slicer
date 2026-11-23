@@ -17,11 +17,13 @@ a.btn{text-decoration:none;color:var(--text);white-space:nowrap;display:inline-b
 header .btn{white-space:nowrap;flex-shrink:0}
 /* Slice-style chooser: opaque panel under the button, a grid of picture cards. */
 .menu-wrap{position:relative}
-.slice-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:30;background:var(--panel);
-  border:1px solid var(--accent);border-radius:8px;padding:12px;width:max-content;max-width:calc(100vw - 24px)}
+/* The chooser is fixed to the window, under the Slice button and inside the page: it never makes the page wider. */
+.slice-menu{position:fixed;top:var(--menu-top,90px);right:12px;z-index:30;background:var(--panel);
+  border:1px solid var(--accent);border-radius:8px;padding:12px;box-sizing:border-box;width:min(560px,calc(100vw - 24px));
+  max-height:calc(100vh - var(--menu-top,90px) - 12px);overflow:auto}
 .slice-menu[hidden]{display:none}
 .menu-title{font-size:12px;color:var(--muted);margin-bottom:8px;font-family:var(--font-mono)}
-.menu-grid{display:grid;grid-template-columns:repeat(2,168px);gap:8px}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
 .opt{display:flex;flex-direction:column;gap:4px;text-align:left;padding:8px;background:var(--bg);
   border:1px solid var(--line);border-radius:6px;cursor:pointer;color:var(--text)}
 .opt:hover,.opt.on{border-color:var(--accent)}
@@ -29,8 +31,7 @@ header .btn{white-space:nowrap;flex-shrink:0}
 .opt b{font-weight:600;font-size:13px}
 .opt small{color:var(--muted);font-size:11px;line-height:1.3}
 .row[hidden]{display:none}
-.zones-grid{display:grid;grid-template-columns:230px minmax(240px,1fr);gap:16px;align-items:start}
-.slice-menu{max-height:calc(100vh - var(--header-h) - 24px);overflow-y:auto}
+.zones-grid{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;align-items:start}
 .menu-title .btn{margin-right:8px;padding:3px 8px}
 @media (max-width:620px){.zones-grid{grid-template-columns:1fr}}
 .seg{display:inline-flex}
@@ -92,7 +93,7 @@ main{position:relative;overflow:hidden}
   .slicebar{bottom:72px;left:8px;right:8px}
   .legend{display:none}
   .menu-wrap{position:static}
-  .slice-menu{position:fixed;top:calc(var(--header-h) + 4px);left:8px;right:8px;width:auto}
+  .slice-menu{left:8px;right:8px;width:auto}
   .menu-grid{grid-template-columns:1fr 1fr}
   .side-resize{display:none}
 }

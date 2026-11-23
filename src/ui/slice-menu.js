@@ -55,7 +55,9 @@ export function initSliceMenu(run) {
 
   const mark = () => menu.querySelectorAll('.opt').forEach(b => b.classList.toggle('on', b.dataset.id === S.npMode));
   const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
-  const open = () => { mark(); showView('grid'); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+  const place = () => menu.style.setProperty("--menu-top", (btn.getBoundingClientRect().bottom + 8) + "px");   // under the button, wherever the header wrapped to
+  const open = () => { mark(); showView("grid"); place(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); };
+  addEventListener("resize", () => { if (!menu.hidden) place(); });
 
   // The zone editor redraws itself while you drag; a click whose target was replaced meanwhile must not close the menu.
   let lastInside = 0;
