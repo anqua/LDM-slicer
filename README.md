@@ -40,52 +40,7 @@ Open `index.html` through a local web server. ES modules don't load from `file:/
 
 ## Project structure
 
-```
-index.html              markup, importmap, loads css/* and src/main.js
-css/
-  theme.css             design tokens (colors, fonts); the 3D scene reads these too
-  layout.css            page structure and responsive rules
-  components.css        buttons, tabs, form rows, cards
-src/
-  main.js               entry point: creates modules and wires them together
-  core/
-    schema.js           settings definition (drives forms and defaults)
-    settings.js         settings store: localStorage, update(patch), onChange()
-    theme.js            cssVar() to read tokens from CSS
-  viewer/
-    viewer.js           renderer, scene, lights, render loop, resize
-    camera-rig.js       perspective/orthographic cameras + OrbitControls, framing
-    bed.js              build plate, grid, build-volume outline, bed extents
-    toolpath.js         toolpath preview, drawn up to the chosen layer
-    gcode-moves.js      reads G-code text back into moves for the exact preview
-    bead-mesh.js        material view: beads as tubes of the real width and height
-  model/
-    model.js            loaded model: rotation, scale/offset placement, fit check
-    loader.js           STL reading
-    demo.js             procedural demo vase
-  slicer/
-    slice.js            mesh -> layer heights and closed contours (outer CCW, holes CW)
-    polygon.js          2D helpers: area, offset, simplify, convex hull, islands
-    paths.js            layer-by-layer engine: priming loops, walls, solid bottom infill, infill; dispatches the spiral
-    spiral.js           spiral engine: one continuous helix (outline blended between layers, fixed seam)
-    infill.js           fill patterns: scanlines, zig-zag, minimal surfaces (TPMS registry, marching squares)
-    gcode.js            toolpaths -> G-code, with pre-fill, safe start and safe end
-  nonstandard/          separate slicing algorithm for the Non-standard slice (shares the G-code writer and the base)
-    engine.js           radial outline per layer, one continuous helix, styles: curved, ruffle, loops
-    field.js            height-field warp for curved layers (mesh refinement, layer space)
-  ui/
-    slice-panel.js      Slice button (opens the slice-style chooser) and Export, layer slider, slice summary
-    form.js             renders schema fields, two-way bound to settings; each section is a dropdown (open state remembered)
-    zones.js            Zones editor in the Slice menu: silhouette with draggable zone boundaries, per-zone style and settings
-    panels.js           sidebar tabs and the Model / Printer / Print paths panes
-    status.js           model summary (status card and Model pane)
-    view-controls.js    3D/Top/Front buttons, projection toggle, keyboard shortcuts
-    file-input.js       Open STL button and drag-and-drop
-    sidebar-resize.js   drag the sidebar edge to resize it (width saved)
-    version-stamp.js    "Updated <date, time>" under the lab logo: time of the latest commit on GitHub
-```
-
-Data flow: UI calls `update({...})` in `core/settings.js`. `main.js` listens with `onChange` and rebuilds the bed and model, then refreshes the status. Modules don't share globals; they're passed what they need.
+See [ARCHITECTURE.md](ARCHITECTURE.md): the folders, how data flows, and where to change things (a setting, an infill pattern, a non-standard style, a printer preset). `tests/index.html` is the regression test: it slices the demo vase with ten sets of settings and compares the G-code with a baseline.
 
 ## Settings
 

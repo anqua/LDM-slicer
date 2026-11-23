@@ -20,7 +20,9 @@ function bindSwitch(btn, initial, onToggle) {
 
 /**
  * @param actions {
- *   slice(), exportGcode(), setShowModel(v), setShowTravel(v),
+ *   exportGcode(), setShowModel(v), setShowTravel(v),
+ *   viewMode, setViewMode(v)   the Toolpath / Material switch (initial value and change)
+ *   exact, setExact(v)         the Exact G-code switch
  *   scrubLayer(n)    jump to the end of layer n (1-based), pausing playback
  *   togglePlay()     start or pause the print simulation
  *   setSpeed(x)      playback speed multiplier

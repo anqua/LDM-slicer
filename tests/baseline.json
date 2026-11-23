@@ -1,0 +1,12 @@
+{
+  "standard layered": { "hash": "54c86c36", "lines": 17014, "warnings": 0 },
+  "standard 2 walls gyroid": { "hash": "8ca836c8", "lines": 107647, "warnings": 0 },
+  "standard zigzag": { "hash": "c892afc7", "lines": 36636, "warnings": 0 },
+  "standard concentric base": { "hash": "449cbfca", "lines": 27735, "warnings": 0 },
+  "standard spiral": { "hash": "4f086e1d", "lines": 31862, "warnings": 0 },
+  "standard infill only": { "hash": "8992bfd4", "lines": 40211, "warnings": 0 },
+  "non-standard curved": { "hash": "64256c8f", "lines": 52648, "warnings": 0 },
+  "non-standard ruffle": { "hash": "acce535f", "lines": 28728, "warnings": 1 },
+  "non-standard loops": { "hash": "59a22cb6", "lines": 153812, "warnings": 0 },
+  "non-standard zones": { "hash": "234a203a", "lines": 67211, "warnings": 0 }
+}

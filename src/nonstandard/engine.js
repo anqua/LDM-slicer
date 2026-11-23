@@ -1,144 +1,89 @@
-// Non-standard slicing engine. Independent of the standard slicer (src/slicer/): it has its own way of
-// finding the outline of a layer and its own toolpath builder.
+// Non-standard slicing engine: a different way to slice from the standard layer-by-layer slicer (src/slicer/).
+// It is for vase-like parts and prints the wall as one continuous helix with a style applied to it.
 //
-//  1. Outline: instead of cutting the mesh into closed contours and chaining them, the engine measures the
-//     part in polar form around its vertical axis: for every layer surface and every angle, the outermost
-//     radius where the mesh crosses it. The result is one radius per angle per layer. Holes in the mesh just
-//     leave an angle unmeasured and are bridged. This assumes the cross-sections are star-shaped around the
-//     axis (vases, pots, cups, bowls, lamp shades); handles, inner cavities and separate parts are ignored.
-//  2. Toolpath: one continuous helix. Turn i leaves the outline of layer i-1 at its seam and reaches the
-//     outline of layer i one turn later, rising by one layer. All layers share the angular parametrisation, so
-//     the blend between two layers is a plain interpolation, and joined turns meet exactly.
-//  3. Style: applied to the wall as it is generated, as a function of the position along the turn:
-//       curved  layers follow a height field (field.js): the mesh is measured in layer space, the path is
-//               mapped back to real heights
-//       ruffle  the wall waves up and down and in and out, a whole number of waves per turn
-//       loops   the wall path curls into small loops (a prolate trochoid in the tangent/vertical plane)
-//  The base (priming loops and bottom layers) is not part of this engine: it is the standard slicer's, flat and
-//  identical to a standard slice. The style starts above it.
+//  1. Outline  (outline.js)  the part measured as one radius per angle per layer, not as chained contours
+//  2. Zones    (zones.js)    which style the wall has at which height: a whole-model style, or the zones of the editor
+//  3. Helix    (helix.js)    one continuous path; every point shaped by the style of its zone (styles.js)
+//  4. Report   (report.js)   travel lift, warnings, the header line
+//  Curved layers (field.js) warp the mesh first, so that step 1 measures the part in "layer space".
+//
+// The base (priming loops and bottom layers) is not made here: it is the standard slicer's, flat and identical to a
+// standard slice. The styles start above it.
 import { makeWarp, warpMesh } from './field.js';
 import { sliceMesh } from '../slicer/slice.js';        // the base only: the standard slicer's contours and bottom layers
 import { buildToolpaths } from '../slicer/paths.js';
+import { TAU, clamp } from './styles.js';
+import { layerList, radialProfiles, ringOf, offsetRing, ringLength, densify } from './outline.js';
+import { makeZones, zoneFinder, curvedEnvelope } from './zones.js';
+import { buildHelix } from './helix.js';
+import { wallHop, collectWarnings, describeSlice } from './report.js';
 
-const TAU = Math.PI * 2;
-const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-const smooth = t => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
-
-/** First layer, then regular layers up to `top`: [{ z, h }], z = top of the layer. */
-function layerList(top, firstH, h) {
-  const out = [];
-  let z = Math.min(firstH, top);
-  out.push({ z, h: z });
-  while (z + h * 0.5 < top) { const nz = Math.min(z + h, top); out.push({ z: nz, h: nz - z }); z = nz; }
-  return out;
-}
-
-/** Angle index of a point: s = 0 at the +Y direction, increasing counter-clockwise, in [0, 1). */
-const fraction = (x, y) => { const s = (Math.atan2(y, x) - Math.PI / 2) / TAU; return s - Math.floor(s); };
-
-/**
- * Outermost radius per angle (N bins) for each layer surface (cut at mid layer). null = nothing measured.
- * Every triangle crossing a layer plane gives a short segment; its points are binned by angle.
- */
-function radialProfiles(mesh, layers, cx, cy, N) {
-  const cuts = layers.map(l => l.z - l.h / 2 + 1e-5);
-  const prof = layers.map(() => new Float32Array(N).fill(-1));
-  const firstAbove = z => { let lo = 0, hi = cuts.length; while (lo < hi) { const m = (lo + hi) >> 1; if (cuts[m] > z) hi = m; else lo = m + 1; } return lo; };
-  const mark = (P, x0, y0, x1, y1) => {
-    const m = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.25));
-    for (let i = 0; i <= m; i++) {
-      const x = x0 + (x1 - x0) * i / m - cx, y = y0 + (y1 - y0) * i / m - cy, r = Math.hypot(x, y);
-      if (r < 1e-6) continue;
-      const j = Math.min(N - 1, Math.floor(fraction(x, y) * N));
-      if (r > P[j]) P[j] = r;
-    }
-  };
-  for (let t = 0; t < mesh.length; t += 9) {
-    const z0 = mesh[t + 2], z1 = mesh[t + 5], z2 = mesh[t + 8];
-    const lo = Math.min(z0, z1, z2), hi = Math.max(z0, z1, z2);
-    if (hi - lo < 1e-9) continue;
-    for (let k = firstAbove(lo); k < cuts.length && cuts[k] < hi; k++) {
-      const zc = cuts[k], pts = [];
-      for (let e = 0; e < 3; e++) {
-        const a = t + e * 3, b = t + ((e + 1) % 3) * 3, za = mesh[a + 2], zb = mesh[b + 2];
-        if ((za < zc) === (zb < zc)) continue;
-        const s = (zc - za) / (zb - za);
-        pts.push(mesh[a] + (mesh[b] - mesh[a]) * s, mesh[a + 1] + (mesh[b + 1] - mesh[a + 1]) * s);
-      }
-      if (pts.length === 4) mark(prof[k], pts[0], pts[1], pts[2], pts[3]);
-    }
-  }
-  return prof.map(P => {
-    const have = []; for (let j = 0; j < N; j++) if (P[j] >= 0) have.push(j);
-    if (!have.length) return null;
-    for (let h = 0; h < have.length; h++) {            // bridge unmeasured angles (holes in the mesh) linearly
-      const a = have[h], b = have[(h + 1) % have.length];
-      const gap = (b - a + N) % N || N;
-      for (let g = 1; g < gap; g++) P[(a + g) % N] = P[a] + (P[b] - P[a]) * g / gap;
-    }
-    const Q = new Float32Array(N);                      // light smoothing: removes the bin staircase
-    for (let j = 0; j < N; j++) Q[j] = 0.25 * P[(j + N - 1) % N] + 0.5 * P[j] + 0.25 * P[(j + 1) % N];
-    return Q;
-  });
-}
-
-/** Closed outline (N points, counter-clockwise, seam at +Y) of a radius profile. */
-function ringOf(P, cx, cy) {
-  const N = P.length;
-  return Array.from({ length: N }, (_, j) => { const a = Math.PI / 2 + TAU * j / N; return [cx + P[j] * Math.cos(a), cy + P[j] * Math.sin(a)]; });
-}
-
-/** Move every point `d` mm along the inward normal (d < 0: outward). */
-function offsetRing(R, d) {
-  const N = R.length;
-  return R.map((p, j) => {
-    const a = R[(j + N - 1) % N], b = R[(j + 1) % N], tx = b[0] - a[0], ty = b[1] - a[1], l = Math.hypot(tx, ty) || 1;
-    return [p[0] - d * ty / l, p[1] + d * tx / l];          // outward normal of a counter-clockwise ring = (ty, -tx)/l
-  });
-}
-
-const ringLength = R => { let L = 0; for (let j = 0; j < R.length; j++) { const a = R[j], b = R[(j + 1) % R.length]; L += Math.hypot(b[0] - a[0], b[1] - a[1]); } return L; };
-
-/** Point at fraction s (any real; wraps) of a ring, linearly interpolated. */
-function sample(R, s) {
-  const N = R.length, f = (s - Math.floor(s)) * N, j = Math.floor(f), t = f - j;
-  const a = R[j % N], b = R[(j + 1) % N];
-  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-}
-
-/** Cut a polyline into steps of at most `step` mm in xy. */
-function densify(pts, step) {
-  const out = [pts[0]];
-  for (let i = 1; i < pts.length; i++) {
-    const p = pts[i - 1], q = pts[i], n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / step));
-    for (let k = 1; k <= n; k++) out.push([p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n, p[2] + (q[2] - p[2]) * k / n]);
-  }
-  return out;
+/** The axis of the part: the middle of its footprint, and the largest distance of any vertex from it. */
+function findAxis(pos) {
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (let i = 0; i < pos.length; i += 3) { x0 = Math.min(x0, pos[i]); x1 = Math.max(x1, pos[i]); y0 = Math.min(y0, pos[i + 1]); y1 = Math.max(y1, pos[i + 1]); }
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  let rmax = 1;
+  for (let i = 0; i < pos.length; i += 3) rmax = Math.max(rmax, Math.hypot(pos[i] - cx, pos[i + 1] - cy));
+  return { cx, cy, rmax };
 }
 
 /**
- * The zones of a slice, in order of height, clipped to the printable wall; zones without a style are plain wall and
- * are left out. A single-style slice (npMode curved / ruffle / loops) is one zone covering what the old settings
- * covered, so one code path serves both. `legacy` zones keep their original ramps.
- * Zone: { style, from, to (mm of height), p: overrides of the settings for this zone }
+ * Curved layers: the warp (all curved zones share the wave of the first one, each with its own rise and fall) and the
+ * mesh moved into layer space. Returns { warp: null, mesh: pos, topL: top } when no zone is curved.
  */
-function makeZones(o, top, baseTop) {
-  if (o.npMode !== 'zones') {
-    if (o.npMode === 'loops') return [{ style: 'loops', from: Math.max(baseTop, top * o.lpFrom / 100), to: top * o.lpTo / 100, p: {}, legacy: true }];
-    return [{ style: o.npMode, from: Math.max(o.npBase, baseTop), to: Infinity, p: {}, legacy: true }];
+function prepareCurved(pos, zones, pOf, zonesMode, rmax, top) {
+  const curved = zones.filter(zn => zn.style === 'curved');
+  if (!curved.length) return { warp: null, mesh: pos, topL: top };
+  const Zc = pOf(curved[0]);
+  const warp = zonesMode ? makeWarp(Zc, rmax, Infinity, curvedEnvelope(curved, Zc.npAmp)) : makeWarp(Zc, rmax, top);
+  const { mesh, top: topL } = warpMesh(pos, warp, Zc.npType === 'cone' ? 80 : Zc.npLen);
+  return { warp, mesh, topL };
+}
+
+/** The base: the standard slicer's priming loops and bottom layers (or only priming loops when there are no bottom layers). */
+function addBase(out, pos, layers, rings, bottomN, o, flat, warnings) {
+  if (bottomN) {
+    const base = sliceMesh(pos, layers.slice(0, bottomN).map(({ z, h }) => ({ z, h })), Math.max(0.02, o.lineW * 0.03));
+    const std = buildToolpaths(base, { ...o, mode: 'layered', infill: 'none', printParts: 'all' });
+    std.layers.forEach((l, i) => out[i].paths.push(...l.paths));
+    warnings.push(...std.warnings);
+  } else {
+    for (let k = Math.round(o.skirtLoops) - 1; k >= 0; k--)
+      out[0].paths.push({ ...flat('skirt', offsetRing(rings[0], -(o.skirtDist + o.lineW * (k + 0.5))), layers[0].z, true), h: layers[0].h });
   }
-  return (o.zones || []).filter(z => z && z.style && z.style !== 'standard')
-    .map(z => ({ style: z.style, from: Math.max(baseTop, +z.from), to: Math.min(top, +z.to), p: z.p || {} }))
-    .filter(z => z.to > z.from + 0.01).sort((p, q) => p.from - q.from);
+}
+
+/** Speeds of the wall paths (first layer, normal; capped by the machine). The base already has its own. */
+function assignSpeeds(out, o) {
+  const bottomFlow = (o.bottomFlow ?? 75) / 100;
+  out.forEach((l, i) => {
+    for (const p of l.paths) {
+      if (p.speed != null) continue;
+      const sp = i === 0 ? o.firstSpeed : p.type === 'bottom' ? (o.bottomSpeed ?? o.speed) : o.speed;
+      p.speed = Math.min(sp, o.maxSpeed);
+      if (p.type === 'bottom') p.flow = bottomFlow;
+    }
+  });
+}
+
+/** Marks the wall paths with their travel lift (none for the first: it starts on top of the flat base) and each layer's real height range. */
+function annotateWall(out, hop) {
+  let firstWall = true;
+  for (const l of out) for (const p of l.paths) if (p.type === 'spiral') { p.hop = firstWall ? 0 : hop; firstWall = false; }
+  for (const l of out) {                                // a curved layer is not at one Z: the layer slider shows the range
+    let lo = Infinity, hi = -Infinity;
+    for (const p of l.paths) if (p.type === 'spiral') for (const q of p.pts) { if (q[2] < lo) lo = q[2]; if (q[2] > hi) hi = q[2]; }
+    if (hi > lo) { l.zMin = lo; l.zMax = hi; }
+  }
 }
 
 /**
  * @param pos  triangle soup (world, z up, model on z = 0)
- * @param o    settings (S)
+ * @param o    settings (S): o.npMode is curved, ruffle, loops (the whole wall above the base) or zones (o.zones)
  * @param top  model height
  * @returns { tp, zMax, hop, note }; tp = { layers: [{ z, h, paths }], warnings } like the standard slicer's result;
  *          hop = z-hop that clears the surface texture on travel moves
- * Style: o.npMode is curved, ruffle, loops (the whole wall above the base) or zones (o.zones: a list of zones).
  */
 export function buildNonStandard(pos, o, top) {
   // The bottom layers are planar (and the standard slicer's): every style starts above them.
@@ -147,38 +92,12 @@ export function buildNonStandard(pos, o, top) {
   const baseTop = nBase ? first[nBase - 1].z : 0;
   o = { ...o, npBase: Math.max(o.npBase, baseTop), lpFrom: Math.max(o.lpFrom, baseTop / top * 100) };
   const zonesMode = o.npMode === 'zones';
-  const zones = makeZones(o, top, baseTop);
-  const zoneAt = z => zones.find(zn => z >= zn.from && z <= zn.to) ?? null;
+  const zones = makeZones(o, top, baseTop), zoneAt = zoneFinder(zones);
   const pOf = zn => ({ ...o, ...zn.p });
-  // Axis: the middle of the footprint of the part.
-  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-  for (let i = 0; i < pos.length; i += 3) { x0 = Math.min(x0, pos[i]); x1 = Math.max(x1, pos[i]); y0 = Math.min(y0, pos[i + 1]); y1 = Math.max(y1, pos[i + 1]); }
-  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-  let rmax = 1;
-  for (let i = 0; i < pos.length; i += 3) rmax = Math.max(rmax, Math.hypot(pos[i] - cx, pos[i + 1] - cy));
 
-  // Curved layers: measure the part in layer space. All curved zones share the wave of the first one; each has its
-  // own rise and fall (the envelope), flat outside.
-  let mesh = pos, warp = null, topL = top;
-  const curvedZones = zones.filter(zn => zn.style === 'curved');
-  if (curvedZones.length) {
-    const Zc = pOf(curvedZones[0]);
-    if (!zonesMode) warp = makeWarp(Zc, rmax, top);
-    else {
-      const A = Math.max(0.1, Zc.npAmp);
-      const env = zp => {
-        let m = 0;
-        for (const zn of curvedZones) {
-          const bl = Math.max(1e-6, Math.min(3 * A, (zn.to - zn.from) / 2));
-          m = Math.max(m, smooth((zp - zn.from) / bl) * (1 - smooth((zp - (zn.to - bl)) / bl)));
-        }
-        return m;
-      };
-      warp = makeWarp(Zc, rmax, Infinity, env);
-    }
-    ({ mesh, top: topL } = warpMesh(pos, warp, Zc.npType === 'cone' ? 80 : Zc.npLen));
-  }
-
+  // 1. Outline
+  const { cx, cy, rmax } = findAxis(pos);
+  const { warp, mesh, topL } = prepareCurved(pos, zones, pOf, zonesMode, rmax, top);
   const layers = layerList(topL, o.firstLayerH || o.layerH, o.layerH);
   const N = clamp(Math.ceil(TAU * rmax / 0.5), 256, 4096);
   const prof = radialProfiles(mesh, layers, cx, cy, N);
@@ -190,155 +109,26 @@ export function buildNonStandard(pos, o, top) {
   const walls = rings.map(R => offsetRing(R, o.lineW / 2));            // path centre = half a line inside the surface
   const perim = walls.map(ringLength);
 
+  // The base, then the wall
   const bottomN = clamp(Math.round(o.bottomLayers), 0, nL);
   const out = layers.slice(0, nL).map(l => ({ z: l.z, h: l.h, paths: [] }));
-  const toWorld = warp ? (x, y, zl) => [x, y, warp.toWorld(x, y, zl)] : (x, y, zl) => [x, y, zl];
-  const flat = (type, loops2d, zl, closed) => {                         // flat (single-height) path in layer space
-    let pts = loops2d.map(([x, y]) => [x, y, zl]);
+  const flat = (type, loop2d, zl, closed) => {          // a flat path (priming loop) in layer space, mapped back to real heights
+    let pts = loop2d.map(([x, y]) => [x, y, zl]);
     if (closed) pts.push(pts[0]);
     if (warp) pts = densify(pts, 1);
-    return { type, pts: pts.map(([x, y, z]) => toWorld(x, y, z)) };
+    return { type, pts: pts.map(([x, y, z]) => warp ? [x, y, warp.toWorld(x, y, z)] : [x, y, z]) };
   };
-
   const warnings = [];
-  if (bottomN) {
-    // The base (priming loops + bottom layers) is the standard slicer's, unchanged and flat: the same
-    // walls, patterns, spacing, flow and speeds as a standard slice. The style starts above it.
-    const base = sliceMesh(pos, layers.slice(0, bottomN).map(({ z, h }) => ({ z, h })), Math.max(0.02, o.lineW * 0.03));
-    const std = buildToolpaths(base, { ...o, mode: 'layered', infill: 'none', printParts: 'all' });
-    std.layers.forEach((l, i) => out[i].paths.push(...l.paths));
-    warnings.push(...std.warnings);
-  } else {
-    // No base: only the priming loops.
-    for (let k = Math.round(o.skirtLoops) - 1; k >= 0; k--)
-      out[0].paths.push({ ...flat('skirt', offsetRing(rings[0], -(o.skirtDist + o.lineW * (k + 0.5))), layers[0].z, true), h: layers[0].h });
-  }
+  addBase(out, pos, layers, rings, bottomN, o, flat, warnings);
 
-  // The wall: one helix. Every turn takes the style of the zone it is in; a point at every step is shaped by it.
-  let zMax = 0, continues = false;                    // continues: the previous wall path ended where this turn starts
-  for (let i = bottomN; i < nL; i++) {
-    const prev = walls[i > 0 ? i - 1 : 0], cur = walls[i], zPrev = i > 0 ? layers[i - 1].z : 0, rise = layers[i].z - zPrev;
-    const zn = zoneAt(zPrev + rise / 2), st = zn ? zn.style : 'standard', Z = zn ? pOf(zn) : o;
-    const a = Z.rfAmp, b = Z.rfRadial, lam = Math.max(4, Z.rfLen);
-    const loopR = Math.max(0.3, Z.lpSize / 2), loopZ = Math.min(loopR, o.layerH * 1.2);
-    const pitch = Math.min(Math.max(1, Z.lpSpacing), 5.5 * loopR);                      // pitch < 2π·r, or no loop forms
-    const step = st === 'ruffle' ? clamp(lam / 16, 0.5, 2) : st === 'loops' ? Math.min(0.5, pitch / 20) : 1;
-    // Ruffle envelope: in over 3 × the larger of height and in/out (thickness stays within 50-150 %), and out again
-    // at the top of a zone, unless the zone runs to the top of the model or is a single-style slice.
-    const bl = st === 'ruffle' ? Math.max(1e-6, Math.min(Math.max(3 * a, 3 * Math.abs(b)), zonesMode ? (zn.to - zn.from) / 2 : Infinity)) : 1;
-    const wR = z => st !== 'ruffle' ? 0 : smooth((z - zn.from) / bl) * (zn.to >= top - 0.01 || zn.legacy ? 1 : 1 - smooth((z - (zn.to - bl)) / bl));
-    const xv = st === 'ruffle' || st === 'curved';        // clay is counted per mm of horizontal advance (gcode.js)
+  // 3. Helix
+  let zMax = buildHelix({ out, layers, walls, perim, bottomN, nL, o, top, warp, zoneAt, pOf, zonesMode });
+  const hop = wallHop(zones, pOf, o, warp);
+  annotateWall(out, hop);
+  assignSpeeds(out, o);
 
-    const L = perim[i], M = Math.max(8, Math.ceil(L / step));
-    const base = s => {                                                // point on the blended outline at turn fraction s
-      const sc = s - Math.floor(s), t = clamp(s, 0, 1), A = sample(prev, sc), B = sample(cur, sc);
-      return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, zPrev + rise * t];
-    };
-    const nWaves = Math.max(1, Math.round(L / lam)), nLoops = Math.max(1, Math.round(L / pitch));
-    const pts = [];
-    for (let k = 0; k <= M; k++) {
-      const s = k / M;
-      let u = s, dz = 0, dn = 0, kap = 1;               // kap: local layer spacing relative to the layer height
-      if (st === 'ruffle') {
-        const sn = Math.sin(TAU * nWaves * s), zb = base(s)[2], w = wR(zb);
-        dz = a * w * sn; dn = b * w * sn;
-        kap = 1 + a * sn * (w - wR(zb - rise)) / rise;
-      } else if (st === 'loops') {
-        const ph = TAU * nLoops * s;
-        u = s - loopR / L * Math.sin(ph);
-        dz = loopZ * (1 - Math.cos(ph));
-      }
-      let [x, y, zl] = base(u);
-      if (dn) {                                                         // outward = right of the direction of travel
-        const p = base(s - 0.25 / L), q = base(s + 0.25 / L), tx = q[0] - p[0], ty = q[1] - p[1], tl = Math.hypot(tx, ty) || 1;
-        x += dn * ty / tl; y -= dn * tx / tl;
-      }
-      const pt = toWorld(x, y, zl + dz);
-      if (warp) kap = warp.kappa(x, y, zl, rise);
-      pt.push(Math.max(0.2, kap), xv ? 1 : 0);                          // pt[3]: layer spacing factor, pt[4]: 1 = per horizontal mm
-      if (pt[2] > zMax) zMax = pt[2];
-      pts.push(pt);
-    }
-    if (!warp) { out[i].paths.push({ type: 'spiral', pts, h: o.layerH, join: i > bottomN }); continue; }
-    // Curved layers: the part ends at its real top. Where a layer surface rises above it, the path stops and
-    // restarts when the surface comes back down (the rim is cut by the layers).
-    let run = [], startsAtTurnStart = true;
-    const flush = ended => {
-      if (run.length > 1) out[i].paths.push({ type: 'spiral', pts: run, h: o.layerH, join: i > bottomN && startsAtTurnStart && continues });
-      if (run.length > 1) continues = ended;
-      run = [];
-    };
-    for (let k = 0; k < pts.length; k++) {
-      if (pts[k][2] <= top + 0.05) { if (!run.length) startsAtTurnStart = k === 0; run.push(pts[k]); }
-      else { flush(false); }
-    }
-    flush(true);
-    if (!out[i].paths.length) continues = false;
-  }
-
-  // Travel moves to or from the wall lift by the height of the texture (the flat base needs no extra lift).
-  let hop = 1;
-  for (const zn of zones) {
-    const Z = pOf(zn);
-    hop = Math.max(hop, zn.style === 'curved' ? 2 * warp.A + 1 : zn.style === 'ruffle' ? 2 * (Z.rfAmp + Math.abs(Z.rfRadial)) + 1
-      : 2 * Math.min(Math.max(0.3, Z.lpSize / 2), o.layerH * 1.2) + 1);
-  }
-  let firstWall = true;                                // the helix starts at the top of the flat base: no lift needed to reach it
-  for (const l of out) for (const p of l.paths) if (p.type === 'spiral') { p.hop = firstWall ? 0 : hop; firstWall = false; }
-
-  // Real height range of each layer (a curved layer is not at one Z): shown by the layer slider.
-  for (const l of out) {
-    let lo = Infinity, hi = -Infinity;
-    for (const p of l.paths) if (p.type === 'spiral') for (const q of p.pts) { if (q[2] < lo) lo = q[2]; if (q[2] > hi) hi = q[2]; }
-    if (hi > lo) { l.zMin = lo; l.zMax = hi; }
-  }
-
-  // Speeds (first layer, bottom, normal; capped by the machine) and the bottom flow multiplier.
-  const bottomFlow = (o.bottomFlow ?? 75) / 100;
-  out.forEach((l, i) => {
-    for (const p of l.paths) {
-      if (p.speed != null) continue;                  // the standard base already has its speeds
-      const sp = i === 0 ? o.firstSpeed : p.type === 'bottom' ? (o.bottomSpeed ?? o.speed) : o.speed;
-      p.speed = Math.min(sp, o.maxSpeed);
-      if (p.type === 'bottom') p.flow = bottomFlow;
-    }
-  });
-
+  // 4. Report
   if (warp) zMax = Math.min(zMax, top + 0.05);
-  if (warp) {
-    const slope = Math.atan(warp.maxSlope) * 180 / Math.PI;
-    if (slope > 30) warnings.push(`Steepest layer slope is ${slope.toFixed(0)}°. Above about 30° the nozzle body may touch the print. Lower the amplitude or lengthen the wavelength.`);
-  }
-  let worstRuffle = 0;
-  for (const zn of zones) if (zn.style === 'ruffle') { const Z = pOf(zn); worstRuffle = Math.max(worstRuffle, Math.atan(Z.rfAmp * TAU / Math.max(4, Z.rfLen)) * 180 / Math.PI); }
-  if (worstRuffle > 40) warnings.push(`The ruffled wall climbs at up to ${worstRuffle.toFixed(0)}°, which clay may not hold and the nozzle body may touch. Lower the wave height or lengthen the wavelength.`);
-  if (warp && warp.reduced) warnings.push(`The model is short for this wave: amplitude reduced to ${warp.A.toFixed(1)} mm (the wave ramps in and out over 3 × amplitude, above the flat base and below the top).`);
-  if (warp) {                                          // how far the wall leans out over the one below, in real space
-    let n = 0, over = 0, worst = 0;
-    for (let i = Math.max(1, bottomN); i < nL; i++) for (let j = 0; j < N; j += 16) {
-      const A = walls[i][j], B = walls[i - 1][j];
-      const dz = warp.toWorld(A[0], A[1], layers[i].z) - warp.toWorld(B[0], B[1], layers[i - 1].z);
-      const ang = Math.atan2(Math.hypot(A[0] - B[0], A[1] - B[1]), Math.max(dz, 0.01)) * 180 / Math.PI;
-      n++; if (ang > 40) over++; if (ang > worst) worst = ang;
-    }
-    if (over / n > 0.05) warnings.push(`${(100 * over / n).toFixed(0)} % of the wall leans more than 40° over the layer below (up to ${worst.toFixed(0)}°): the clay may sag. Lower the amplitude or lengthen the wavelength.`);
-  }
-  if (zMax > o.bedZ) warnings.push(`The print reaches Z ${zMax.toFixed(0)} mm, above the ${o.bedZ} mm build height.`);
-  for (const zn of zones) if (zn.style === 'loops') {
-    const Z = pOf(zn);
-    if (Z.lpSpacing > 5.5 * Math.max(0.3, Z.lpSize / 2)) { warnings.push(`Loop spacing reduced to ${(5.5 * Math.max(0.3, Z.lpSize / 2)).toFixed(1)} mm so the path forms loops at this size.`); break; }
-  }
-  if (!zonesMode && o.npMode === 'loops' && o.lpFrom >= o.lpTo) warnings.push('Loop texture: "from" must be below "to".');
-  if (zonesMode && !zones.length) warnings.push('No zone has a style: nothing differs from a standard spiral. Add a zone with a style.');
-
-  const describe = zn => {
-    const Z = pOf(zn);
-    return zn.style === 'curved' ? `curved layers (${Z.npType}, amplitude ${Z.npAmp} mm, wavelength ${Z.npLen} mm, direction ${Z.npAngle}°)`
-      : zn.style === 'ruffle' ? `ruffled wall (amplitude ${Z.rfAmp} mm, wavelength ${Z.rfLen} mm, in/out ${Z.rfRadial} mm)`
-      : `loop texture (loop Ø ${Z.lpSize} mm, spacing ${Z.lpSpacing} mm)`;
-  };
-  const note = zonesMode
-    ? `Non-standard slice, zones: ${zones.map(zn => `${zn.from.toFixed(0)}–${Math.min(zn.to, top).toFixed(0)} mm ${describe(zn)}`).join('; ') || 'none'}`
-    : `Non-standard slice, ${zones.length ? describe(zones[0]) : o.npMode}${o.npMode === 'loops' ? `, from ${o.lpFrom} % to ${o.lpTo} % of the height` : `, flat base ${o.npBase} mm`}`;
-  return { tp: { layers: out, warnings }, zMax, hop, note };
+  collectWarnings(warnings, { zones, pOf, o, warp, zonesMode, zMax, walls, layers, N, bottomN, nL });
+  return { tp: { layers: out, warnings }, zMax, hop, note: describeSlice(zones, pOf, o, top, zonesMode) };
 }

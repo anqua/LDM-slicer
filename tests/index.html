@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LDM Slicer: regression test</title>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+<style>
+body{background:#000;color:#e8e8e8;font:14px/1.5 "Space Mono",monospace;padding:24px}
+h1{font-size:16px;color:#00ff00}
+table{border-collapse:collapse} td,th{padding:4px 14px;text-align:left;border-bottom:1px solid #2a2a2a}
+.ok{color:#00ff00} .bad{color:#ff5a5a} button{background:#000;color:#00ff00;border:1px solid #00ff00;padding:6px 12px;cursor:pointer}
+pre{background:#111;padding:12px;max-width:900px;overflow:auto}
+</style>
+</head>
+<body>
+<h1>Slicing regression test</h1>
+<p>Slices the demo vase with several settings and compares a fingerprint of the G-code with <code>baseline.json</code>.</p>
+<div id="out">Running…</div>
+<script type="module">
+import { runCases } from './regression.js';
+const out = document.getElementById('out');
+let baseline = {};
+try { baseline = await (await fetch('baseline.json', { cache: 'no-store' })).json(); } catch { /* no baseline yet */ }
+const t0 = performance.now(), now = runCases();
+let bad = 0;
+const rows = Object.entries(now).map(([name, r]) => {
+  const b = baseline[name], ok = b && b.hash === r.hash;
+  if (!ok) bad++;
+  return `<tr><td>${name}</td><td>${r.hash}</td><td>${r.lines}</td><td class="${ok ? 'ok' : 'bad'}">${ok ? 'same' : b ? 'CHANGED (was ' + b.hash + ')' : 'no baseline'}</td></tr>`;
+});
+out.innerHTML = `<table><tr><th>case</th><th>hash</th><th>lines</th><th>vs baseline</th></tr>${rows.join('')}</table>
+  <p class="${bad ? 'bad' : 'ok'}">${bad ? bad + ' case(s) differ' : 'All cases match the baseline'} · ${Math.round(performance.now() - t0)} ms</p>
+  <button id="copy">Copy new baseline</button><pre id="json" hidden></pre>`;
+document.getElementById('copy').onclick = () => {
+  const j = document.getElementById('json'); j.hidden = false; j.textContent = JSON.stringify(now, null, 2);
+  navigator.clipboard?.writeText(j.textContent).catch(() => {});
+};
+window.__results = now;
+</script>
+</body>
+</html>

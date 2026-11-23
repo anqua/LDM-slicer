@@ -3,21 +3,22 @@ import { S, update, onChange } from '../core/settings.js';
 
 const inputs = new Map();        // setting key -> input element
 
-function fieldHTML(f) {
+/** The row of one schema field. `prefix` makes the element id (the Slice menu's zone editor reuses this with its own). */
+export function fieldHTML(f, prefix = "f_") {
   if (f.h) return `<h3>${f.h}</h3>`;
-  const id = 'f_' + f.k;
+  const id = prefix + f.k;
   const help = f.help ? `<small>${f.help}</small>` : '';
   if (f.type === 'area')
-    return `<div class="field-area"><label for="${id}">${f.label}</label><textarea id="${id}" spellcheck="false"></textarea></div>`;
+    return `<div class="field-area"><label for="${id}">${f.label}</label><textarea id="${id}" data-k="${f.k}" spellcheck="false"></textarea></div>`;
   let input;
   if (f.type === 'select')
-    input = `<select id="${id}">${f.opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>`;
+    input = `<select id="${id}" data-k="${f.k}">${f.opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>`;
   else if (f.type === 'text')
-    input = `<input id="${id}" type="text">`;
+    input = `<input id="${id}" data-k="${f.k}" type="text">`;
   else {
     // Room on the right for the unit label; longer units (e.g. "× nozzle") need more than the default.
     const pad = f.unit && f.unit.length > 4 ? ` style="padding-right:${12 + f.unit.length * 7}px"` : '';
-    input = `<div class="unit"><input id="${id}" type="number" step="${f.step ?? 'any'}"${pad}`
+    input = `<div class="unit"><input id="${id}" data-k="${f.k}" type="number" step="${f.step ?? 'any'}"${pad}`
       + `${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}>`
       + `${f.unit ? `<span>${f.unit}</span>` : ''}</div>`;
   }

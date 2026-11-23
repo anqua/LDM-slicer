@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>LDM Slicer: stress test</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<style>body{background:#000;color:#e8e8e8;font:13px/1.5 "Space Mono",monospace;padding:20px}h1{font-size:16px;color:#00ff00}
+td,th{padding:2px 10px;text-align:left;border-bottom:1px solid #222;vertical-align:top}.ok{color:#00ff00}.bad{color:#ff5a5a}</style></head>
+<body><h1>Stress test</h1><div id="sum">Running…</div><table id="t"></table>
+<script type="module">
+import { runStress } from './stress.js';
+const t0 = performance.now();
+const res = runStress();
+window.__stress = res;
+const bad = res.filter(r => r.problems.length);
+document.getElementById('sum').innerHTML = `<p class="${bad.length ? 'bad' : 'ok'}">${res.length} cases, ${bad.length} with problems · ${Math.round(performance.now() - t0)} ms</p>`;
+document.getElementById('t').innerHTML = res.map(r => `<tr><td>${r.shape}</td><td>${r.label}</td><td>${r.ms ?? ''} ms</td><td class="${r.problems.length ? 'bad' : 'ok'}">${r.problems.join('; ') || 'ok'}</td></tr>`).join('');
+</script></body></html>
