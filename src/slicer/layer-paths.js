@@ -20,7 +20,7 @@ function createSink(paths, z, h, pos) {
     },
     /** One wall: a closed loop starting at its seam. */
     wall(type, loop, o, rng) {
-      const pts = seamLoop(loop, o.seam, pos, rng).map(([x, y]) => [x, y, z]);
+      const pts = seamLoop(loop, o.seam, pos, rng, (o.seamAngle ?? 90) * Math.PI / 180).map(([x, y]) => [x, y, z]);
       paths.push({ type, pts, h });
       pos = pts.at(-1);
     },

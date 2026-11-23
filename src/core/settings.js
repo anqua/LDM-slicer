@@ -46,6 +46,9 @@ if (S.firstLayerH === 0.7) S.firstLayerH = defaults.firstLayerH;   // old defaul
 if (S.modeV2 !== true) { if (S.mode === "spiral") S.mode = defaults.mode; S.modeV2 = true; }   // once: the default path mode is now layer by layer (standard)
 if (S.layerH === 0.7 && S.lineW === 1.4) { S.layerH = defaults.layerH; S.lineW = defaults.lineW; }   // old defaults (sized for a 1.2 mm nozzle) -> 60 % and 120 % of the default 2 mm nozzle
 
+// "Infill only" is a one-off choice: a model never opens without its walls because of a setting saved earlier.
+S.printParts = defaults.printParts;
+
 // Saved numbers outside a field's min/max (e.g. a 1.2 mm nozzle after the range became 1.5–3) reset to default.
 for (const group of Object.values(SCHEMA)) for (const f of group) {
   if (!f.k || (f.min == null && f.max == null)) continue;

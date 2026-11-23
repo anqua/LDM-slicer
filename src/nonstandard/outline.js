@@ -4,7 +4,7 @@
 // for every layer surface and every angle, the outermost radius where the mesh crosses it: one radius per angle per layer.
 // Holes in the mesh just leave an angle unmeasured and are bridged. This assumes cross-sections that are star-shaped
 // around the axis (vases, pots, cups, bowls, lamp shades): handles, inner cavities and separate parts are ignored.
-// All layers share the angular parametrisation (s = 0 at +Y, counter-clockwise), so blending two layers is an interpolation.
+// All layers share the angular parametrisation (s = 0 at the seam angle, S.seamAngle, counter-clockwise), so blending two layers is an interpolation.
 import { TAU } from './styles.js';
 
 /** First layer, then regular layers up to `top`: [{ z, h }], z = top of the layer. */
@@ -16,14 +16,14 @@ export function layerList(top, firstH, h) {
   return out;
 }
 
-/** Fraction of a turn at which a point lies around the axis: 0 at the +Y direction, counter-clockwise, in [0, 1). */
-const fraction = (x, y) => { const s = (Math.atan2(y, x) - Math.PI / 2) / TAU; return s - Math.floor(s); };
+/** Fraction of a turn at which a point lies around the axis: 0 at the seam direction a0 (radians, 0 = +X, pi/2 = +Y), counter-clockwise, in [0, 1). */
+const fraction = (x, y, a0) => { const s = (Math.atan2(y, x) - a0) / TAU; return s - Math.floor(s); };
 
 /**
  * Outermost radius per angle (N bins) for each layer surface (cut at mid layer). null = nothing measured.
  * Every triangle crossing a layer plane gives a short segment; its points are binned by angle.
  */
-export function radialProfiles(mesh, layers, cx, cy, N) {
+export function radialProfiles(mesh, layers, cx, cy, N, a0 = Math.PI / 2) {
   const cuts = layers.map(l => l.z - l.h / 2 + 1e-5);
   const prof = layers.map(() => new Float32Array(N).fill(-1));
   const firstAbove = z => { let lo = 0, hi = cuts.length; while (lo < hi) { const m = (lo + hi) >> 1; if (cuts[m] > z) hi = m; else lo = m + 1; } return lo; };
@@ -32,7 +32,7 @@ export function radialProfiles(mesh, layers, cx, cy, N) {
     for (let i = 0; i <= m; i++) {
       const x = x0 + (x1 - x0) * i / m - cx, y = y0 + (y1 - y0) * i / m - cy, r = Math.hypot(x, y);
       if (r < 1e-6) continue;
-      const j = Math.min(N - 1, Math.floor(fraction(x, y) * N));
+      const j = Math.min(N - 1, Math.floor(fraction(x, y, a0) * N));
       if (r > P[j]) P[j] = r;
     }
   };
@@ -65,10 +65,10 @@ export function radialProfiles(mesh, layers, cx, cy, N) {
   });
 }
 
-/** Closed outline (N points, counter-clockwise, seam at +Y) of a radius profile. */
-export function ringOf(P, cx, cy) {
+/** Closed outline (N points, counter-clockwise, starting at the seam direction a0) of a radius profile. */
+export function ringOf(P, cx, cy, a0 = Math.PI / 2) {
   const N = P.length;
-  return Array.from({ length: N }, (_, j) => { const a = Math.PI / 2 + TAU * j / N; return [cx + P[j] * Math.cos(a), cy + P[j] * Math.sin(a)]; });
+  return Array.from({ length: N }, (_, j) => { const a = a0 + TAU * j / N; return [cx + P[j] * Math.cos(a), cy + P[j] * Math.sin(a)]; });
 }
 
 /** Move every point `d` mm along the inward normal (d < 0: outward). */

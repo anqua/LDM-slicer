@@ -74,12 +74,12 @@ export function resampleClosed(loop, n) {
 const perimeter = loop => { let L = 0; for (let i = 0; i < loop.length; i++) { const a = loop[i], b = loop[(i + 1) % loop.length]; L += Math.hypot(b[0] - a[0], b[1] - a[1]); } return L; };
 
 /** Wall centre line of a layer: largest part, offset inward by half a line width, seam-aligned. */
-function wallOutline(sl, lineW) {
+function wallOutline(sl, lineW, seamAngle) {
   const isl = islands(sl.loops);
   if (!isl.length) return { loop: null, parts: 0 };
   const outer = isl.reduce((m, it) => (area(it.outer) > area(m.outer) ? it : m), isl[0]).outer;
   const inner = offset(outer, lineW / 2);
-  return { loop: inner ? rebaseAtRay(inner) : null, parts: isl.length };
+  return { loop: inner ? rebaseAtRay(inner, seamAngle) : null, parts: isl.length };
 }
 
 /**
@@ -96,13 +96,14 @@ export function buildSpiral(sliced, o, first) {
   // Points per turn: about one per `seg` mm, but never fewer than 48.
   const seg = Math.min(2, Math.max(0.6, o.lineW * 0.7));
 
+  const ang = (o.seamAngle ?? 90) * Math.PI / 180;               // S.seamAngle: where the helix starts and ends each turn
   let prev = null;                                              // wall outline of the layer below
   let zTop = null;                                              // height the helix has reached so far
-  if (first > 0) { const w = wallOutline(sliced[first - 1], o.lineW); prev = w.loop; if (prev) zTop = sliced[first - 1].z; }
+  if (first > 0) { const w = wallOutline(sliced[first - 1], o.lineW, ang); prev = w.loop; if (prev) zTop = sliced[first - 1].z; }
   let started = false;                                          // true once a turn has been emitted
 
   for (let i = first; i < sliced.length; i++) {
-    const sl = sliced[i], w = wallOutline(sl, o.lineW);
+    const sl = sliced[i], w = wallOutline(sl, o.lineW, ang);
     if (w.parts > 1) multiPart = true;
     if (!w.loop) continue;                                      // no usable outline here: skip it, the next turn rises further
     const cur = w.loop;

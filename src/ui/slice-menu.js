@@ -1,4 +1,4 @@
-// The "Non-standard slice" menu: a chooser with a small picture of each way to slice.
+// The Slice menu: a chooser with a small picture of each way to slice.
 // Picking one sets the style (npMode) and slices right away. The pictures are side views of the printed
 // lines, drawn as SVG from the same formulas the slicer uses (stacked flat lines, curved lines, waves, loops).
 import { S, update, onChange } from '../core/settings.js';
@@ -9,8 +9,10 @@ const path = (n, f) => 'M' + Array.from({ length: n + 1 }, (_, i) => f(i / n).ma
 const line = d => `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
 
 const PICTURES = {
-  // flat layers, one on top of the other
-  standard: () => Array.from({ length: 9 }, (_, i) => line(`M14 ${60 - i * 6} L106 ${60 - i * 6}`)).join(''),
+  // flat layers, one on top of the other (the Z cut)
+  layered: () => Array.from({ length: 9 }, (_, i) => line(`M14 ${60 - i * 6} L106 ${60 - i * 6}`)).join(''),
+  // one continuous helix: a single line that climbs, no steps
+  helix: () => line('M14 62' + Array.from({ length: 9 }, (_, i) => ` L106 ${62 - i * 6 - 3} L14 ${62 - i * 6 - 6}`).join('')),
   // layers that curve more and more: waves growing from flat at the bottom
   curved: () => Array.from({ length: 9 }, (_, i) => {
     const a = Math.max(0, i - 1) * 0.95, y = 60 - i * 6;
@@ -31,7 +33,8 @@ const PICTURES = {
 };
 
 const OPTIONS = [
-  { id: 'standard', title: 'Standard slice', text: 'Flat layers, one on top of the other (layer by layer).' },
+  { id: 'layered', title: 'Standard: layer by layer', text: 'The model is cut into flat layers (Z cuts), printed one on top of the other. Walls, infill, any shape.' },
+  { id: 'helix', title: 'Standard: continuous helix', text: 'One single wall that climbs without stopping (spiral vase). No infill.' },
   { id: 'curved', title: 'Non-planar', text: 'The layers themselves curve: wave, ripple or cone.' },
   { id: 'ruffle', title: 'Ruffled wall', text: 'The wall waves up and down and in and out.' },
   { id: 'loops', title: 'Loop texture', text: 'The wall curls into small loops between two heights.' },
@@ -72,7 +75,7 @@ export function initSliceMenu(run) {
   menu.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => {
     if (b.dataset.id === 'zones') { showView('zones'); return; }       // edit the zones first; the editor has its own Slice button
     close();
-    if (b.dataset.id === 'standard') { update({ mode: 'layered' }); run(false); }
+    if (b.dataset.id === 'layered' || b.dataset.id === 'helix') { update({ mode: b.dataset.id === 'helix' ? 'spiral' : 'layered' }); run(false); }
     else { update({ npMode: b.dataset.id }); run(true); }
   }));
   mark();

@@ -121,6 +121,23 @@ export function checkGcode(text, S, ctx) {
   return { problems: probs, info: { ext, extLen, volume, maxZ, ratioMin, ratioMax, layers: layers.length, bbox: [minX, minY, maxX, maxY], types: Object.keys(typeSeen) } };
 }
 
+
+/** Seam checks on the toolpaths: helix turns start at the chosen angle and join end to start without a jump. */
+export function checkSeams(tp, S, shape) {
+  const probs = [];
+  const want = (((S.seamAngle ?? 90) % 360) + 360) % 360;
+  const spirals = tp.layers.flatMap(l => l.paths).filter(p => p.type === 'spiral' || (S.seam === 'angle' && p.type === 'outer' && S.mode !== 'spiral' && !S.npMode));
+  let off = 0, jump = 0, prevEnd = null, n = 0;
+  for (const p of spirals) {
+    const a = p.pts[0], r = Math.hypot(a[0], a[1]);
+    if (r > 5) { n++; const ang = ((Math.atan2(a[1], a[0]) * 180 / Math.PI) % 360 + 360) % 360, d = Math.min(Math.abs(ang - want), 360 - Math.abs(ang - want)); if (d > 4) off++; }
+    if (p.join && prevEnd && Math.hypot(a[0] - prevEnd[0], a[1] - prevEnd[1], a[2] - prevEnd[2]) > 0.01) jump++;
+    prevEnd = p.pts.at(-1);
+  }
+  if (off) probs.push(`${off} of ${n} turns do not start at the seam angle ${want}°`);
+  if (jump) probs.push(`${jump} joined turns do not continue from where the last one ended`);
+  return probs;
+}
 // ---- cases ----
 function opts(k) {
   for (const g of Object.values(SCHEMA)) for (const f of (g.fields ?? g)) if (f && f.k === k && f.opts) return f.opts.map(o => o[0]);
@@ -160,6 +177,11 @@ export function buildCases() {
     const vaselike = ['vase', 'cylinder', 'tube'].includes(sh);
     for (const npMode of opts('npMode')) add(sh, `non-standard ${npMode}`, { npMode, zones: ZONES }, true, { vaselike });
   }
+  for (const sh of ['vase', 'cylinder', 'tube']) for (const a of [0, 135, 270]) {
+    add(sh, `spiral seam ${a}°`, { mode: 'spiral', seamAngle: a }, false, { seams: true });
+    add(sh, `layered seam at angle ${a}°`, { seam: 'angle', seamAngle: a, walls: 2 }, false, { seams: true });
+    for (const npMode of ['curved', 'ruffle', 'loops']) add(sh, `non-standard ${npMode} seam ${a}°`, { npMode, seamAngle: a }, true, { seams: true, vaselike: true });
+  }
   add('vase', 'curved wave amp 10 len 80', { npMode: 'curved', npType: 'wave', npAmp: 10, npLen: 80 }, true);
   add('vase', 'curved ripple', { npMode: 'curved', npType: 'ripple', npAmp: 5, npLen: 40 }, true);
   add('vase', 'curved cone', { npMode: 'curved', npType: 'cone', npAmp: 8 }, true);
@@ -186,7 +208,7 @@ export function runStress(onRow) {
       row.ms = Math.round(performance.now() - t0);
       row.warnings = tp.warnings;
       const ck = checkGcode(gcode.text, S, { top: sh.top, zSlack: c.nonStandard ? 40 : 1.5, expectLowTop: c.nonStandard && !c.ctx.vaselike });
-      row.problems = ck.problems; row.info = ck.info;
+      row.problems = [...ck.problems, ...(c.ctx.seams ? checkSeams(tp, S) : [])]; row.info = ck.info;
     } catch (e) { row.error = String(e.stack || e).split('\n').slice(0, 3).join(' | '); row.problems = ['EXCEPTION ' + e.message]; }
     results.push(row); onRow?.(row);
   }

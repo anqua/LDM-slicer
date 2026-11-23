@@ -100,12 +100,13 @@ export function buildNonStandard(pos, o, top) {
   const { warp, mesh, topL } = prepareCurved(pos, zones, pOf, zonesMode, rmax, top);
   const layers = layerList(topL, o.firstLayerH || o.layerH, o.layerH);
   const N = clamp(Math.ceil(TAU * rmax / 0.5), 256, 4096);
-  const prof = radialProfiles(mesh, layers, cx, cy, N);
+  const seamA = (o.seamAngle ?? 90) * Math.PI / 180;               // where each turn of the helix starts and ends
+  const prof = radialProfiles(mesh, layers, cx, cy, N, seamA);
   let nL = prof.length;
   while (nL > 0 && !prof[nL - 1]) nL--;                // nothing measured above the top
   if (!nL) throw new Error('Nothing to print: the model has no outline at the first layer.');
   for (let i = 1; i < nL; i++) if (!prof[i]) prof[i] = prof[i - 1];   // a layer with no crossing at all repeats the one below
-  const rings = prof.slice(0, nL).map(P => ringOf(P, cx, cy));
+  const rings = prof.slice(0, nL).map(P => ringOf(P, cx, cy, seamA));
   const walls = rings.map(R => offsetRing(R, o.lineW / 2));            // path centre = half a line inside the surface
   const perim = walls.map(ringLength);
 

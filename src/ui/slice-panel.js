@@ -69,7 +69,7 @@ export function initSlicePanel(actions) {
     /** Enable Slice when a model is loaded. */
     setCanSlice(v) {
       npBtn.disabled = !v;
-      npBtn.title = v ? 'Choose how to slice: standard, non-planar, ruffled wall, loop texture (S = standard)' : 'Load a model first';
+      npBtn.title = v ? 'Choose how to slice: standard, non-planar, ruffled wall, loop texture (S = standard, with the current path mode)' : 'Load a model first';
     },
     busy(v, np = false) {
       npBtn.textContent = v ? 'Slicing…' : 'Slice ▾';
