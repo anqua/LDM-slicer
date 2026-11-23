@@ -4,6 +4,7 @@ import { area, contains, simplify } from './polygon.js';
 
 /** Layer heights: first layer, then regular layers, until the top of the model. */
 export function layerHeights(top, firstH, layerH) {
+  layerH = Math.max(0.05, layerH || 0);                 // a zero or negative height would never reach the top
   const out = [];
   let z = Math.min(firstH, top);
   out.push({ z, h: z });

@@ -23,7 +23,7 @@ export function fieldHTML(f, prefix = "f_") {
       + `${f.unit ? `<span>${f.unit}</span>` : ''}</div>`;
   }
   const dep = (f.dep ? ` data-dep="${f.dep[0]}" data-vals="${f.dep[1].join(",")}"` : "")
-    + (f.off ? ` data-off="${f.off[0]}" data-offvals="${f.off[1].join(",")}"` : "");
+    + (f.off ? ` data-off='${JSON.stringify(Array.isArray(f.off[0]) ? f.off : [f.off])}'` : "");
   const stack = f.type === "select" && f.opts.some(([, t]) => t.length > 16) ? " stack" : "";   // long option names: the dropdown gets the full width under its label
   return `<div class="row${stack}"${dep}><label for="${id}">${f.label}</label>${input}${help}</div>`;
 }
@@ -33,7 +33,7 @@ function applyDeps() {
   for (const row of document.querySelectorAll('[data-dep]'))
     row.hidden = !row.dataset.vals.split(',').includes(String(S[row.dataset.dep]));
   for (const row of document.querySelectorAll("[data-off]")) {
-    const off = row.dataset.offvals.split(",").includes(String(S[row.dataset.off]));
+    const off = JSON.parse(row.dataset.off).some(([k, vals]) => vals.map(String).includes(String(S[k])));   // any rule matches
     row.classList.toggle("off", off);
     row.title = off ? "Not used with the current settings" : "";
     row.querySelectorAll("input,select,textarea").forEach(e => { e.disabled = off; });

@@ -49,7 +49,7 @@ header .btn{white-space:nowrap;flex-shrink:0}
   font-size:13px;line-height:1.3;text-align:left}
 .lab img{width:56px;height:56px;display:block;flex-shrink:0}      /* the logo keeps its size */
 /* When the slicer was last updated: bottom right corner of the screen. */
-.updated{position:fixed;right:12px;bottom:6px;z-index:5;font-size:11px;line-height:1.2;color:var(--muted);font-family:var(--font-mono);white-space:nowrap;pointer-events:none}
+.updated{position:fixed;right:12px;bottom:6px;z-index:5;background:var(--bg);padding:2px 6px;border-radius:4px;font-size:11px;line-height:1.2;color:var(--muted);font-family:var(--font-mono);white-space:nowrap;pointer-events:none}
 .updated[hidden]{display:none}
 
 .app{--side-w:330px;position:relative;display:grid;grid-template-columns:var(--side-w) 1fr;
@@ -80,16 +80,23 @@ main{position:relative;overflow:hidden}
 #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
   color:var(--muted);text-align:center}
 
+/* A narrow viewport (sidebar + a small view): the cards start below the view buttons instead of under them. */
+@media (max-width:1100px) and (min-width:761px){.overlay{top:54px;max-width:calc(100% - 28px)}}
+
 @media (max-width:760px){
   :root{--header-h:64px}
+  .app{min-height:0}
   .app{grid-template-columns:1fr;grid-template-rows:55% 45%}
   main{order:-1} aside{border-right:0;border-top:1px solid var(--line)}
-  header{padding:0 12px;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .brand span{display:none}
+  header{padding:6px 12px;gap:6px;row-gap:6px;flex-wrap:wrap} .brand span{display:none}   /* wraps to a second row: every button stays reachable */
   header .spacer{display:none}
   .lab span{display:none}
   .lab-block{padding-left:8px;flex-shrink:0}
-  .lab img{width:44px;height:44px}
-  .viewbtns{top:auto;bottom:30px}
+  .lab img{width:36px;height:36px}
+  header .btn{padding:5px 8px;font-size:12px}
+  .lab-block{margin-left:auto;border-left:0}
+  .viewbtns{top:auto;bottom:30px;flex-wrap:wrap}
+  .overlay{max-width:calc(100% - 28px)}
   .slicebar{bottom:72px;left:8px;right:8px}
   .legend{display:none}
   .menu-wrap{position:static}

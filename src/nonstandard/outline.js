@@ -9,6 +9,7 @@ import { TAU } from './styles.js';
 
 /** First layer, then regular layers up to `top`: [{ z, h }], z = top of the layer. */
 export function layerList(top, firstH, h) {
+  h = Math.max(0.05, h || 0);                            // a zero or negative height would never reach the top
   const out = [];
   let z = Math.min(firstH, top);
   out.push({ z, h: z });
