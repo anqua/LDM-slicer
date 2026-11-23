@@ -188,6 +188,10 @@ export function buildToolpaths(sliced, o) {
     multiIsland = sp.multiPart;
   }
 
+  // The slicer closes small holes in the mesh so the outlines stay whole; tell the user the model is damaged.
+  const repaired = sliced.filter(s => s.gaps > 0).length, stillOpen = sliced.filter(s => s.open > 0).length;
+  if (repaired) warnings.push(`The model's mesh has holes: ${repaired} layer${repaired > 1 ? 's' : ''} had gaps in the outline, closed automatically. Repair the mesh in your CAD program for a reliable print.`);
+  if (stillOpen) warnings.push(`${stillOpen} layer${stillOpen > 1 ? 's have' : ' has'} an outline that could not be closed (a hole larger than 8 mm). Those layers may print wrongly.`);
   if (multiIsland) warnings.push('Spiral mode prints one outline per layer; some layers have several parts and only the largest is printed.');
   if (spiral && o.walls > 1) warnings.push('Spiral mode always prints a single wall.');
   if (spiral && o.infill !== 'none') warnings.push('Infill is only printed in layer-by-layer mode.');

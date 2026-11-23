@@ -54,38 +54,88 @@ export function sliceMesh(pos, layers, tol = 0.05) {
       }
       if (pts.length === 2) segs.push(pts);
     }
-    return { z: l.z, h: l.h, loops: chain(segs, tol) };
+    const stats = {};
+    const loops = chain(segs, tol, stats);
+    return { z: l.z, h: l.h, loops, gaps: stats.gaps ?? 0, open: stats.open ?? 0 };
   });
 }
 
 const key = p => `${Math.round(p[0] * 1e4)},${Math.round(p[1] * 1e4)}`;
 
-/** Join segments that share endpoints into closed loops and orient them. */
-function chain(segs, tol) {
+/** Largest gap (mm) between two open ends that is still treated as a hole in the mesh and closed. */
+const MAX_GAP = 8;
+
+/**
+ * Join segments that share endpoints into closed loops and orient them.
+ * A watertight mesh gives only closed loops. A mesh with missing triangles gives open chains: they are
+ * walked in both directions (so a chain is never torn in two at the segment we happened to start from),
+ * then open ends closer than MAX_GAP are joined to each other, nearest first, which closes the hole.
+ * `stats.gaps` counts the gaps closed that way and `stats.open` the chains that stayed open.
+ */
+function chain(segs, tol, stats = {}) {
   const at = new Map();                                  // point key -> segment indices
   const add = (k, i) => { const l = at.get(k); l ? l.push(i) : at.set(k, [i]); };
   segs.forEach((s, i) => { add(key(s[0]), i); add(key(s[1]), i); });
   const used = new Uint8Array(segs.length);
-  const loops = [];
+  const take = k => { const j = (at.get(k) || []).find(x => !used[x]); if (j === undefined) return null; used[j] = 1; return j; };
+  const other = (j, k) => (key(segs[j][0]) === k ? segs[j][1] : segs[j][0]);
+  const closedLoops = [], openChains = [];
 
   for (let i = 0; i < segs.length; i++) {
     if (used[i]) continue;
     used[i] = 1;
-    const loop = [segs[i][0]];
-    let cur = segs[i][1];
     const startKey = key(segs[i][0]);
-    for (let guard = 0; guard < segs.length; guard++) {
-      const k = key(cur);
-      if (k === startKey) break;
-      loop.push(cur);
-      const next = (at.get(k) || []).find(j => !used[j]);
-      if (next === undefined) break;                     // open chain (non-manifold mesh): keep what we have
-      used[next] = 1;
-      const s = segs[next];
-      cur = key(s[0]) === k ? s[1] : s[0];
+    const fwd = [];
+    let head = segs[i][1], closed = false;
+    for (let guard = 0; guard <= segs.length; guard++) {          // forward from the segment's end
+      const k = key(head);
+      if (k === startKey) { closed = true; break; }
+      const j = take(k);
+      if (j === null) break;
+      fwd.push(head);
+      head = other(j, k);
     }
-    if (loop.length >= 3) loops.push(loop);
+    if (closed) { closedLoops.push([segs[i][0], ...fwd]); continue; }
+    fwd.push(head);
+    const bwd = [];
+    let tail = segs[i][0];
+    for (let guard = 0; guard <= segs.length; guard++) {          // and backward from its start
+      const k = key(tail);
+      const j = take(k);
+      if (j === null) break;
+      tail = other(j, k);
+      bwd.push(tail);
+    }
+    openChains.push([...bwd.reverse(), segs[i][0], ...fwd]);
   }
+
+  // Close holes: repeatedly join the two nearest open ends (any orientation) that are within MAX_GAP.
+  const d = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  let chains = openChains;
+  const tooBroken = chains.length > 150;                          // the search below is quadratic: skip it for hopeless meshes
+  for (let guard = 0; guard < 10000 && chains.length && !tooBroken; guard++) {
+    let best = null;
+    for (let a = 0; a < chains.length; a++) {
+      const A = chains[a];
+      const selfGap = d(A[0], A.at(-1));                          // a chain whose own ends nearly meet closes on itself
+      if (A.length >= 3 && selfGap <= MAX_GAP && (!best || selfGap < best.gap)) best = { a, b: a, gap: selfGap, flipA: false, flipB: false };
+      for (let b = a + 1; b < chains.length; b++) {
+        const B = chains[b];
+        for (const flipA of [false, true]) for (const flipB of [false, true]) {
+          const gap = d(flipA ? A[0] : A.at(-1), flipB ? B.at(-1) : B[0]);   // A's (possibly reversed) end to B's (possibly reversed) start
+          if (gap <= MAX_GAP && (!best || gap < best.gap)) best = { a, b, gap, flipA, flipB };
+        }
+      }
+    }
+    if (!best) break;
+    stats.gaps = (stats.gaps ?? 0) + 1;
+    if (best.a === best.b) { closedLoops.push(chains[best.a]); chains = chains.filter((_, i) => i !== best.a); continue; }
+    const A = best.flipA ? [...chains[best.a]].reverse() : chains[best.a];
+    const B = best.flipB ? [...chains[best.b]].reverse() : chains[best.b];
+    chains = [...chains.filter((_, i) => i !== best.a && i !== best.b), [...A, ...B]];
+  }
+  stats.open = (stats.open ?? 0) + chains.filter(c => c.length >= 3 && Math.abs(area(c)) > tol * tol * 4).length;
+  const loops = [...closedLoops, ...chains].filter(l => l.length >= 3);   // what is still open is closed by its chord
 
   // Simplify, drop slivers, then orient by nesting depth: even = outer (CCW), odd = hole (CW).
   const clean = loops.map(l => simplify(l, tol)).filter(l => l.length >= 3 && Math.abs(area(l)) > tol * tol * 4);
