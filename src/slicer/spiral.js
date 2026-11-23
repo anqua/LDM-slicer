@@ -33,16 +33,20 @@ function centroid(loop) {
  */
 export function rebaseAtRay(loop, ang = SEAM_ANGLE) {
   const [cx, cy] = centroid(loop), dx = Math.cos(ang), dy = Math.sin(ang), n = loop.length;
+  // Which side of the ray's line a point is on. An edge crosses the line when its ends are on different
+  // sides under the half-open rule "side < 0": a vertex lying exactly on the line then counts as
+  // non-negative for both of its edges, so it is crossed exactly once. (Testing the edge parameter against
+  // [0, 1) instead can miss a vertex on the ray through rounding, and then the seam jumps to a random place.)
+  const side = p => (p[0] - cx) * dy - (p[1] - cy) * dx;
   let best = -1, bs = 0, bt = -Infinity;
   for (let i = 0; i < n; i++) {
-    const a = loop[i], b = loop[(i + 1) % n], ex = b[0] - a[0], ey = b[1] - a[1];
-    const den = dx * ey - dy * ex;
-    if (Math.abs(den) < 1e-12) continue;
-    const rx = a[0] - cx, ry = a[1] - cy;
-    const t = (rx * ey - ry * ex) / den, s = (rx * dy - ry * dx) / den;     // ray: c + t·d, edge: a + s·e
-    if (t > 0 && s >= 0 && s < 1 && t > bt) { bt = t; best = i; bs = s; }
+    const a = loop[i], b = loop[(i + 1) % n], sa = side(a), sb = side(b);
+    if ((sa < 0) === (sb < 0)) continue;
+    const s = sa / (sa - sb);                                              // 0..1 along the edge
+    const t = (a[0] + (b[0] - a[0]) * s - cx) * dx + (a[1] + (b[1] - a[1]) * s - cy) * dy;   // distance along the ray
+    if (t > bt) { bt = t; best = i; bs = s; }
   }
-  if (best < 0) return loop;
+  if (best < 0 || bt <= 0) return loop;
   const a = loop[best], b = loop[(best + 1) % n];
   const p = [a[0] + (b[0] - a[0]) * bs, a[1] + (b[1] - a[1]) * bs];
   return [p, ...loop.slice(best + 1), ...loop.slice(0, best + 1)];
@@ -93,13 +97,14 @@ export function buildSpiral(sliced, o, first) {
   const seg = Math.min(2, Math.max(0.6, o.lineW * 0.7));
 
   let prev = null;                                              // wall outline of the layer below
-  if (first > 0) { const w = wallOutline(sliced[first - 1], o.lineW); prev = w.loop; }
+  let zTop = null;                                              // height the helix has reached so far
+  if (first > 0) { const w = wallOutline(sliced[first - 1], o.lineW); prev = w.loop; if (prev) zTop = sliced[first - 1].z; }
   let started = false;                                          // true once a turn has been emitted
 
   for (let i = first; i < sliced.length; i++) {
     const sl = sliced[i], w = wallOutline(sl, o.lineW);
     if (w.parts > 1) multiPart = true;
-    if (!w.loop) continue;                                      // nothing here (e.g. above the top): keep the last outline
+    if (!w.loop) continue;                                      // no usable outline here: skip it, the next turn rises further
     const cur = w.loop;
 
     // Nothing below (the model starts with the spiral): the first turn stays flat on the bed.
@@ -107,16 +112,18 @@ export function buildSpiral(sliced, o, first) {
     const lower = prev ?? cur;
     const n = Math.max(48, Math.ceil(Math.max(perimeter(lower), perimeter(cur)) / seg));
     const A = resampleClosed(lower, n), B = resampleClosed(cur, n);
-    const z0 = flat ? sl.z : sl.z - sl.h;
+    const z0 = flat ? sl.z : zTop;                              // start exactly at the height already reached
+    const rise = flat ? sl.h : sl.z - z0;                       // normally one layer; more if a layer was skipped
 
     const pts = [];
     for (let j = 0; j <= n; j++) {
       const f = j / n, k = j % n;                               // k wraps: the last point is the seam point again
       pts.push([A[k][0] + (B[k][0] - A[k][0]) * f, A[k][1] + (B[k][1] - A[k][1]) * f, z0 + (sl.z - z0) * f]);
     }
-    paths.set(i, { type: 'spiral', pts, h: sl.h, join: started });
+    paths.set(i, { type: 'spiral', pts, h: rise, join: started });
     started = true;
     prev = cur;
+    zTop = sl.z;
   }
   return { paths, multiPart };
 }
