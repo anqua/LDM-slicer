@@ -14,8 +14,11 @@
 //               mapped back to real heights
 //       ruffle  the wall waves up and down and in and out, a whole number of waves per turn
 //       loops   the wall path curls into small loops (a prolate trochoid in the tangent/vertical plane)
-//  The solid base (bottom layers) is printed flat: a wall ring plus scanline fill.
+//  The base (priming loops and bottom layers) is not part of this engine: it is the standard slicer's, flat and
+//  identical to a standard slice. The style starts above it.
 import { makeWarp, warpMesh } from './field.js';
+import { sliceMesh } from '../slicer/slice.js';        // the base only: the standard slicer's contours and bottom layers
+import { buildToolpaths } from '../slicer/paths.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -103,31 +106,6 @@ function sample(R, s) {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
 
-/** Zig-zag scanlines across a closed polygon, `gap` apart, at `angleDeg`. Returns [[x,y],[x,y]] segments. */
-function scanFill(loop, angleDeg, gap) {
-  const c = Math.cos(-angleDeg * Math.PI / 180), s = Math.sin(-angleDeg * Math.PI / 180);
-  const P = loop.map(([x, y]) => [x * c - y * s, x * s + y * c]);
-  let y0 = Infinity, y1 = -Infinity;
-  for (const p of P) { y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); }
-  const out = [], bc = Math.cos(angleDeg * Math.PI / 180), bs = Math.sin(angleDeg * Math.PI / 180);
-  const back = ([x, y]) => [x * bc - y * bs, x * bs + y * bc];
-  let flip = false;
-  for (let y = y0 + gap / 2; y < y1; y += gap) {
-    const xs = [];
-    for (let i = 0; i < P.length; i++) {
-      const a = P[i], b = P[(i + 1) % P.length];
-      if ((a[1] <= y) !== (b[1] <= y)) xs.push(a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]));
-    }
-    xs.sort((m, n) => m - n);
-    const row = [];
-    for (let i = 0; i + 1 < xs.length; i += 2) if (xs[i + 1] - xs[i] > gap * 0.3) row.push([back([xs[i], y]), back([xs[i + 1], y])]);
-    if (flip) { row.reverse(); row.forEach(sg => sg.reverse()); }
-    out.push(...row);
-    flip = !flip;
-  }
-  return out;
-}
-
 /** Cut a polyline into steps of at most `step` mm in xy. */
 function densify(pts, step) {
   const out = [pts[0]];
@@ -147,6 +125,11 @@ function densify(pts, step) {
  */
 export function buildNonStandard(pos, o, top) {
   const style = o.npMode;
+  // The bottom layers are planar (and the standard slicer's): every style starts above them.
+  const first = layerList(top, o.firstLayerH || o.layerH, o.layerH);
+  const nBase = clamp(Math.round(o.bottomLayers), 0, first.length);
+  const baseTop = nBase ? first[nBase - 1].z : 0;
+  o = { ...o, npBase: Math.max(o.npBase, baseTop), lpFrom: Math.max(o.lpFrom, baseTop / top * 100) };
   // Axis: the middle of the footprint of the part.
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (let i = 0; i < pos.length; i += 3) { x0 = Math.min(x0, pos[i]); x1 = Math.max(x1, pos[i]); y0 = Math.min(y0, pos[i + 1]); y1 = Math.max(y1, pos[i + 1]); }
@@ -182,17 +165,18 @@ export function buildNonStandard(pos, o, top) {
     return { type, pts: pts.map(([x, y, z]) => toWorld(x, y, z)) };
   };
 
-  // Priming loops around the first layer, outermost first.
-  for (let k = Math.round(o.skirtLoops) - 1; k >= 0; k--)
-    out[0].paths.push({ ...flat('skirt', offsetRing(rings[0], -(o.skirtDist + o.lineW * (k + 0.5))), layers[0].z, true), h: layers[0].h });
-
-  // Solid base: wall ring + zig-zag fill, each layer flat.
-  const gap = Math.max(o.lineW * 0.5, (o.bottomSpacingX ?? 1) * o.nozzle);
-  for (let i = 0; i < bottomN; i++) {
-    out[i].paths.push({ ...flat('outer', walls[i], layers[i].z, true), h: layers[i].h });
-    const inner = offsetRing(rings[i], o.lineW * 1.35);
-    for (const seg of scanFill(inner, o.bottomAngle + (i % 2 ? 90 : 0), gap))
-      out[i].paths.push({ ...flat('bottom', seg, layers[i].z, false), h: layers[i].h });
+  const warnings = [];
+  if (bottomN) {
+    // The base (priming loops + bottom layers) is the standard slicer's, unchanged and flat: the same
+    // walls, patterns, spacing, flow and speeds as a standard slice. The style starts above it.
+    const base = sliceMesh(pos, layers.slice(0, bottomN).map(({ z, h }) => ({ z, h })), Math.max(0.02, o.lineW * 0.03));
+    const std = buildToolpaths(base, { ...o, mode: 'layered', infill: 'none' });
+    std.layers.forEach((l, i) => out[i].paths.push(...l.paths));
+    warnings.push(...std.warnings);
+  } else {
+    // No base: only the priming loops.
+    for (let k = Math.round(o.skirtLoops) - 1; k >= 0; k--)
+      out[0].paths.push({ ...flat('skirt', offsetRing(rings[0], -(o.skirtDist + o.lineW * (k + 0.5))), layers[0].z, true), h: layers[0].h });
   }
 
   // The wall: one helix, a style-shaped point at every step.
@@ -255,6 +239,7 @@ export function buildNonStandard(pos, o, top) {
   const bottomFlow = (o.bottomFlow ?? 75) / 100;
   out.forEach((l, i) => {
     for (const p of l.paths) {
+      if (p.speed != null) continue;                  // the standard base already has its speeds
       const sp = i === 0 ? o.firstSpeed : p.type === 'bottom' ? (o.bottomSpeed ?? o.speed) : o.speed;
       p.speed = Math.min(sp, o.maxSpeed);
       if (p.type === 'bottom') p.flow = bottomFlow;
@@ -262,7 +247,6 @@ export function buildNonStandard(pos, o, top) {
   });
 
   if (warp) zMax = Math.min(zMax, top + 0.05);
-  const warnings = [];
   if (warp) {
     const slope = Math.atan(warp.maxSlope) * 180 / Math.PI;
     if (slope > 30) warnings.push(`Steepest layer slope is ${slope.toFixed(0)}°. Above about 30° the nozzle body may touch the print. Lower the amplitude or lengthen the wavelength.`);

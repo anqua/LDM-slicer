@@ -23,7 +23,7 @@ Being built step by step.
   - *Curved layers* (non-planar): wave, ripple or cone height field. The part is measured in layer space (mesh refined and warped flat) and the path is mapped back with its z following the surface. The first layers stay flat; the effect ramps in over 3 × amplitude. Warns above 30° slope.
   - *Ruffled wall*: the wall waves up and down and in and out, a whole number of waves per turn so it closes at the seam; every turn repeats the one below, so the crests stack in columns.
   - *Loop texture*: the wall path curls into small loops (a trochoid in the tangent/vertical plane) between two heights.
-  - These styles use their own engine (`src/nonstandard/`), separate from the standard slicer (only the G-code writer is shared): the part is measured as one radius per angle per layer and printed as one continuous helix with the style applied to the wall. It suits vase-like parts (cross-sections star-shaped around the axis); handles, cavities and separate parts are ignored. Base: flat wall ring plus zig-zag fill. No infill. Travel moves lift by the texture height.
+  - These styles use their own engine (`src/nonstandard/`), separate from the standard slicer (shares the G-code writer and the base): the part is measured as one radius per angle per layer and printed as one continuous helix with the style applied to the wall. It suits vase-like parts (cross-sections star-shaped around the axis); handles, cavities and separate parts are ignored. The base (priming loops and bottom layers) is the standard slicer's, flat and identical to a standard slice; the style starts above it. No infill. Travel moves lift by the texture height.
 
 Not yet: top surfaces, and acceleration in the time estimate.
 
@@ -64,7 +64,7 @@ src/
     spiral.js           spiral engine: one continuous helix (outline blended between layers, fixed seam)
     infill.js           fill patterns: scanlines, zig-zag, minimal surfaces (TPMS registry, marching squares)
     gcode.js            toolpaths -> G-code, with pre-fill, safe start and safe end
-  nonstandard/          separate slicing algorithm for the Non-standard slice (only the G-code writer is shared)
+  nonstandard/          separate slicing algorithm for the Non-standard slice (shares the G-code writer and the base)
     engine.js           radial outline per layer, one continuous helix, styles: curved, ruffle, loops
     field.js            height-field warp for curved layers (mesh refinement, layer space)
   ui/
