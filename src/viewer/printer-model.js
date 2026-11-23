@@ -65,17 +65,17 @@ export function createPrinterModel(scene) {
     const { cx, cy } = bedCenter(), bedR = S.bedX / 2;
     const footprint = frame?.footprint ?? bedR * 4.9;              // WASP 2040: 490 mm for a Ø200 bed
     const towerR = footprint / Math.sqrt(3) * 0.85;
-    const below = frame?.below ?? S.bedZ * 0.3;
-    const top = frame ? frame.height - below : S.bedZ * 1.9;
-    const at = (a, r, z) => new THREE.Vector3(cx + r * Math.cos(a), cy + r * Math.sin(a), z);
-
     const BASE_T = 30, TOP_T = 25, TOWER_W = 30;
+    const PED_H = 12;                      // the round build platform is a short, thin plate on the base
+    const below = BASE_T + PED_H;          // everything under the bed surface (z = 0)
+    const top = frame ? frame.height - below : S.bedZ * 1.9;      // keeps the machine's total height
+    const at = (a, r, z) => new THREE.Vector3(cx + r * Math.cos(a), cy + r * Math.sin(a), z);
 
     // Base slab and bed support.
     group.add(triSlab(cx, cy, -below, towerR * 1.22, BASE_T, M.dark));
-    const support = new THREE.Mesh(new THREE.CylinderGeometry(bedR * 1.04, bedR * 1.04, below - BASE_T, 64), M.dark);
+    const support = new THREE.Mesh(new THREE.CylinderGeometry(bedR * 1.04, bedR * 1.04, PED_H, 64), M.dark);
     support.rotation.x = Math.PI / 2;
-    support.position.set(cx, cy, -(below - BASE_T) / 2 - 0.2);
+    support.position.set(cx, cy, -PED_H / 2 - 0.2);
     group.add(support);
 
     // Towers run between the top of the base slab and the underside of the top ring.

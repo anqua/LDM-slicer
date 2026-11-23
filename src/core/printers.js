@@ -21,7 +21,7 @@ export const PRINTERS = {
       maxSpeed: 150, travelSpeed: 150,
       flavor: 'marlin',
     },
-    // Machine 490 × 440 × 870 mm. `below`: frame base below the bed surface (estimate).
-    frame: { footprint: 490, height: 870, below: 120 },
+    // Machine 490 × 440 × 870 mm overall (the base and the thin build platform sit under the bed surface).
+    frame: { footprint: 490, height: 870 },
   },
 };
