@@ -29,6 +29,10 @@ header .btn{white-space:nowrap;flex-shrink:0}
 .opt b{font-weight:600;font-size:13px}
 .opt small{color:var(--muted);font-size:11px;line-height:1.3}
 .row[hidden]{display:none}
+.zones-grid{display:grid;grid-template-columns:230px minmax(240px,1fr);gap:16px;align-items:start}
+.slice-menu{max-height:calc(100vh - var(--header-h) - 24px);overflow-y:auto}
+.menu-title .btn{margin-right:8px;padding:3px 8px}
+@media (max-width:620px){.zones-grid{grid-template-columns:1fr}}
 .seg{display:inline-flex}
 .seg .btn{border-radius:0}
 .seg .btn:first-child{border-radius:6px 0 0 6px}

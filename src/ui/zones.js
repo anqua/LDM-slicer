@@ -1,4 +1,4 @@
-// Zones tab: split the height of the model into zones and give each its own non-standard style.
+// Zones (opened from the Slice menu): split the height of the model into zones and give each its own non-standard style.
 //
 // S.zones is a list that covers the whole height without gaps: [{ from, to, style, p }] (mm). style is
 // standard / curved / ruffle / loops; p holds the settings this zone overrides (wave height, loop size, ...).
@@ -19,11 +19,11 @@ const $ = id => document.getElementById(id);
 const W = 300, H = 300, X0 = 50, X1 = 250, Y0 = 14, Y1 = 286;
 
 /**
+* @param pane the element the editor draws into (the Slice menu)
  * @param api { profile(): { top, r: [radius per height bin, bottom to top] } | null, slice(): slices with the zones }
  * @returns { refresh() }  call when the model changes
  */
-export function initZones(api) {
-  const pane = $('pane-zones');
+export function initZones(pane, api) {
   let zones = [], top = 0, sel = 0, drag = null;
 
   /** The saved zones, fitted to the model height; [] or a stale list becomes one standard zone. */
@@ -56,7 +56,7 @@ export function initZones(api) {
   function draw() {
     const prof = api.profile();
     if (!prof || !top) {
-      pane.innerHTML = `<h3>Zones</h3><div class="info">Load a model to split its height into zones.</div>`;
+      pane.innerHTML = '<div class="info">Load a model to split its height into zones.</div>';
       return;
     }
     const poly = silhouette(prof);
@@ -75,7 +75,7 @@ export function initZones(api) {
       : `<div class="row"><label for="z_${k}">${label}</label><div class="unit"><input id="z_${k}" data-k="${k}" type="number" step="${step}" min="${min}" max="${max}" value="${val(zn, k)}"><span>${unit}</span></div></div>`).join('');
 
     pane.innerHTML = `
-      <h3>Height zones</h3>
+      <div class="zones-grid"><div>
       <svg id="zsvg" viewBox="0 0 ${W} ${H}" width="100%" style="display:block;background:#000;border:1px solid var(--line);border-radius:8px;touch-action:none" role="img" aria-label="Model silhouette with zone boundaries">
         <defs><clipPath id="zclip"><polygon points="${poly}"/></clipPath></defs>
         <g clip-path="url(#zclip)">${bands}</g>
@@ -87,12 +87,13 @@ export function initZones(api) {
         <button class="btn" id="zSplit" title="Cut the selected zone in two">Split zone</button>
         <button class="btn" id="zMerge" title="Merge the selected zone into the one above"${zones.length < 2 ? ' disabled' : ''}>Remove zone</button>
       </div>
+      </div><div>
       <h3>Zone ${sel + 1} · ${zn.from.toFixed(0)}–${zn.to.toFixed(0)} mm</h3>
       <div class="row"><label for="z_style">Style</label><select id="z_style">${STYLES.map(([v, t]) => `<option value="${v}"${zn.style === v ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
       ${fields}
       <div class="row"><small>${zn.style === 'standard' ? 'Plain wall, layer by layer height as in Print paths.' : 'The effect rises and falls over about three times its amplitude at the zone edges, so zones blend into their neighbours. The bottom layers stay flat and standard.'}</small></div>
       <div class="btns" style="margin-top:10px"><button class="btn primary" id="zSlice">Slice with zones</button></div>
-      <div class="info" style="margin-top:10px">Drag the green handles to move a boundary. Curved zones share the wave of the first curved zone, only the amplitude differs.</div>`;
+      <div class="info" style="margin-top:10px">Drag the green handles to move a boundary. Curved zones share the wave of the first curved zone, only the amplitude differs.</div></div></div>`;
     wire();
   }
 

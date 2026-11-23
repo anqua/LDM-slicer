@@ -35,32 +35,44 @@ const OPTIONS = [
   { id: 'curved', title: 'Non-planar', text: 'The layers themselves curve: wave, ripple or cone.' },
   { id: 'ruffle', title: 'Ruffled wall', text: 'The wall waves up and down and in and out.' },
   { id: 'loops', title: 'Loop texture', text: 'The wall curls into small loops between two heights.' },
-  { id: 'zones', title: 'Zones', text: 'Different styles at different heights, set in the Zones tab.' },
+  { id: 'zones', title: 'Zones', text: 'Different styles at different heights. Opens the zone editor.' },
 ];
 
-/** @param run(nonplanar)  slices; `nonplanar` true uses the style in S.npMode */
+/**
+ * @param run(nonplanar)  slices; `nonplanar` true uses the style in S.npMode
+ * @returns { zonesBox }  the element the zone editor (ui/zones.js) draws into: the Zones card opens it inside this menu
+ */
 export function initSliceMenu(run) {
   const btn = document.getElementById('sliceNP'), menu = document.getElementById('sliceMenu');
-  menu.innerHTML = `<div class="menu-title">How to slice</div><div class="menu-grid">` + OPTIONS.map(o => `
+  menu.innerHTML = `<div id="menuGrid"><div class="menu-title">How to slice</div><div class="menu-grid">` + OPTIONS.map(o => `
     <button class="opt" data-id="${o.id}">
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.title}">${PICTURES[o.id]()}</svg>
       <b>${o.title}</b><small>${o.text}</small>
-    </button>`).join('') + `</div>`;
+    </button>`).join('') + `</div></div>
+    <div id="menuZones" hidden><div class="menu-title"><button class="btn" id="menuBack">← How to slice</button> Zones: a style for each height</div><div id="zonesBox"></div></div>`;
+  const grid = menu.querySelector('#menuGrid'), zonesView = menu.querySelector('#menuZones');
+  const showView = v => { grid.hidden = v !== 'grid'; zonesView.hidden = v !== 'zones'; };
 
   const mark = () => menu.querySelectorAll('.opt').forEach(b => b.classList.toggle('on', b.dataset.id === S.npMode));
   const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
-  const open = () => { mark(); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
+  const open = () => { mark(); showView('grid'); menu.hidden = false; btn.setAttribute('aria-expanded', 'true'); };
 
+  // The zone editor redraws itself while you drag; a click whose target was replaced meanwhile must not close the menu.
+  let lastInside = 0;
+  menu.addEventListener('pointerdown', () => { lastInside = Date.now(); }, true);
   btn.addEventListener('click', e => { e.stopPropagation(); menu.hidden ? open() : close(); });
   menu.addEventListener('click', e => e.stopPropagation());
-  document.addEventListener('click', close);
+  document.addEventListener('click', () => { if (Date.now() - lastInside > 400) close(); });
   addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   onChange(keys => { if (keys.includes('npMode')) mark(); });
+  menu.querySelector('#menuBack').addEventListener('click', () => showView('grid'));
 
   menu.querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.id === 'zones') { showView('zones'); return; }       // edit the zones first; the editor has its own Slice button
     close();
     if (b.dataset.id === 'standard') { update({ mode: 'layered' }); run(false); }
     else { update({ npMode: b.dataset.id }); run(true); }
   }));
   mark();
+  return { zonesBox: menu.querySelector('#zonesBox'), close };
 }

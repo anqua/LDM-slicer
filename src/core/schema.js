@@ -111,7 +111,7 @@ export const SCHEMA = {
     // is only shown while that setting has one of these values.
     { h: 'Non-standard slice' },
     { k: 'npMode', label: 'Style', type: 'select', def: 'curved',
-      opts: [['curved', 'Curved layers (non-planar)'], ['ruffle', 'Ruffled wall'], ['loops', 'Loop texture'], ['zones', 'Zones (Zones tab)']],
+      opts: [['curved', 'Curved layers (non-planar)'], ['ruffle', 'Ruffled wall'], ['loops', 'Loop texture'], ['zones', 'Zones (Slice menu)']],
       help: 'Also chosen from the Slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: the wall waves up and down and in and out as it goes round. Loop texture: the wall path curls into small loops between two heights.' },
     { k: 'npType', label: 'Layer shape', type: 'select', def: 'wave', dep: ['npMode', ['curved']],
       opts: [['wave', 'Wave (sine across the part)'], ['ripple', 'Ripple (rings from the center)'], ['cone', 'Cone (center higher)']],

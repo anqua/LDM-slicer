@@ -231,7 +231,7 @@ initPanels({
 
 initViewControls(rig, frameView);
 initSidebarResize();
-initSliceMenu(runSlice);               // chooser with pictures; sets the style, then slices
+const sliceMenu = initSliceMenu(runSlice);               // chooser with pictures; sets the style, then slices
 
 /** Silhouette of the model for the Zones tab: the largest distance from the axis in 60 height bins. */
 function modelProfile() {
@@ -246,7 +246,7 @@ function modelProfile() {
   for (let i = n - 2; i >= 0; i--) if (!r[i]) r[i] = r[i + 1];
   return { top, r: Array.from(r) };
 }
-zonesUi = initZones({ profile: modelProfile, slice() { update({ npMode: "zones" }); runSlice(true); } });
+zonesUi = initZones(sliceMenu.zonesBox, { profile: modelProfile, slice() { sliceMenu.close(); update({ npMode: "zones" }); runSlice(true); } });
 initVersionStamp();                    // async; does not block anything
 initFileInput(openFile);
 document.getElementById('demo').addEventListener('click', () => openModel(demoVaseGeometry(), 'demo-vase.stl'));

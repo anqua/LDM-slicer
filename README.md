@@ -21,7 +21,7 @@ Being built step by step.
   - Minimal surfaces: gyroid, I-WP and F-RD (Schoen, NASA TN D-5541, 1970), Schwarz D and P, Neovius, Fischer–Koch S, lidinoid, split P, and the double gyroid (two gyroid networks, printed as paired lines).
   - Each is a short trigonometric series whose zero set approximates the surface, cut at the layer height. Gyroid and Schwarz D are close to exact; I-WP, F-RD, lidinoid, split P and the double gyroid are rougher approximations. Not included: the other surfaces in Schoen's report (O,C-TO, C(D), the hybrids), for which no closed-form level-set was found.
 
-- [x] **Zones** (Zones tab): split the height into zones with draggable boundaries on the model silhouette; each zone has its own style (standard, curved, ruffle, loops) and settings, and the effect rises and falls at the zone edges. Slice with the Zones card or the button in the tab. Next: parameter curves inside a zone.
+- [x] **Zones** (the Zones card in the Slice menu opens the editor): split the height into zones with draggable boundaries on the model silhouette; each zone has its own style (standard, curved, ruffle, loops) and settings, and the effect rises and falls at the zone edges. Slice from the editor. Next: parameter curves inside a zone.
 - [x] **Infill only** (Print paths → Print): prints the infill and the bottom layers without the outer walls; the infill reaches the outline. Layer by layer. The default path mode is now layer by layer (standard).
 - [x] **Slice styles** (the Slice button opens a chooser with a picture of each way to slice, `ui/slice-menu.js`; settings in Print paths → Non-standard slice). Standard (layer by layer) plus three non-standard styles:
   - *Curved layers* (non-planar): wave, ripple or cone height field. The part is measured in layer space (mesh refined and warped flat) and the path is mapped back with its z following the surface. The first layers stay flat; the effect ramps in over 3 × amplitude. Warns above 30° slope.
@@ -76,7 +76,7 @@ src/
   ui/
     slice-panel.js      Slice button (opens the slice-style chooser) and Export, layer slider, slice summary
     form.js             renders schema fields, two-way bound to settings
-    zones.js            Zones tab: silhouette with draggable zone boundaries, per-zone style and settings
+    zones.js            Zones editor in the Slice menu: silhouette with draggable zone boundaries, per-zone style and settings
     panels.js           sidebar tabs and the Model / Printer / Print paths panes
     status.js           model summary (status card and Model pane)
     view-controls.js    3D/Top/Front buttons, projection toggle, keyboard shortcuts
