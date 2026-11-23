@@ -27,11 +27,15 @@
   <button class="btn primary" id="slice" disabled title="Load a model first">Slice</button>
   <button class="btn" id="export" disabled title="Slice first">Export G-code</button>
   <!-- Lockup matches the @A website footer: logo + "@A | Art / Technology / Architecture", Space Grotesk 500 -->
-  <a class="lab" href="https://anqua.github.io/at-a/" target="_blank" rel="noopener"
-     title="@A | Art, Technology, Architecture">
-    <img src="assets/logo-ata-192.png" alt="@A logo" width="56" height="56">
-    <span>@A | Art<br>Technology<br>Architecture</span>
-  </a>
+  <div class="lab-block">
+    <a class="lab" href="https://anqua.github.io/at-a/" target="_blank" rel="noopener"
+       title="@A | Art, Technology, Architecture">
+      <img src="assets/logo-ata-192.png" alt="@A logo" width="56" height="56">
+      <span>@A | Art<br>Technology<br>Architecture</span>
+    </a>
+    <!-- Filled in by src/ui/version-stamp.js: time of the latest commit on GitHub -->
+    <div class="updated" id="updated" hidden></div>
+  </div>
 </header>
 
 <div class="app">

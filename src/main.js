@@ -17,6 +17,7 @@ import { layerHeights, sliceMesh } from './slicer/slice.js';
 import { buildToolpaths } from './slicer/paths.js';
 import { toGcode } from './slicer/gcode.js';
 import { initSidebarResize } from './ui/sidebar-resize.js';
+import { initVersionStamp } from './ui/version-stamp.js';
 
 const { scene, rig, onFrame } = createViewer(document.getElementById('view'));
 const bed = createBed(scene);
@@ -193,6 +194,7 @@ initPanels({
 
 initViewControls(rig, frameView);
 initSidebarResize();
+initVersionStamp();                    // async; does not block anything
 initFileInput(openFile);
 document.getElementById('demo').addEventListener('click', () => openModel(demoVaseGeometry(), 'demo-vase.stl'));
 rig.onProjectionChange(kind => { S.projection = kind; save(); });
