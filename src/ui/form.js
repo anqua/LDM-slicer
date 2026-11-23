@@ -31,11 +31,41 @@ function applyDeps() {
     row.hidden = !row.dataset.vals.split(',').includes(String(S[row.dataset.dep]));
 }
 
+// Sections: every heading in a pane opens and closes its own group of settings. The first group of a pane starts
+// open, the others closed; what the user opens is remembered (this browser only).
+const SECTION_KEY = 'ldm.sections.v1';
+const readSections = () => { try { return JSON.parse(localStorage.getItem(SECTION_KEY) || '{}'); } catch { return {}; } };
+const writeSections = s => { try { localStorage.setItem(SECTION_KEY, JSON.stringify(s)); } catch { /* storage unavailable */ } };
+
+function groupedHTML(paneId, fields) {
+  const state = readSections();
+  let html = '', open = false;
+  const end = () => { if (open) html += '</div></div>'; open = false; };
+  fields.forEach((f, i) => {
+    if (!f.h) { html += fieldHTML(f); return; }
+    end();
+    const id = paneId + ':' + f.h, isOpen = state[id] ?? i === 0;
+    html += `<div class="grp${isOpen ? ' open' : ''}" data-grp="${id}"><button type="button" class="grp-h" aria-expanded="${isOpen}">${f.h}</button><div class="grp-body">`;
+    open = true;
+  });
+  end();
+  return html;
+}
+
+function wireGroups(container) {
+  container.querySelectorAll('.grp-h').forEach(btn => btn.addEventListener('click', () => {
+    const g = btn.parentElement, on = !g.classList.contains('open');
+    g.classList.toggle('open', on);
+    btn.setAttribute('aria-expanded', String(on));
+    const s = readSections(); s[g.dataset.grp] = on; writeSections(s);
+  }));
+}
+
 const isNumeric = f => !f.type || f.type === 'num';
 
 /** Render fields into a container, with optional extra HTML before/after. */
 export function renderFields(container, fields, { before = '', after = '' } = {}) {
-  container.innerHTML = before + fields.map(fieldHTML).join('') + after;
+  container.innerHTML = before + groupedHTML(container.id, fields) + after;
   for (const f of fields) {
     if (!f.k) continue;
     const el = container.querySelector('#f_' + f.k);
@@ -54,6 +84,7 @@ export function renderFields(container, fields, { before = '', after = '' } = {}
     });
   }
   applyDeps();
+  wireGroups(container);
 }
 
 // Reflect programmatic changes (e.g. "Scale to fit bed") back into the inputs.

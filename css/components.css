@@ -61,3 +61,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .card{pointer-events:auto;background:var(--overlay);border:1px solid var(--line);border-radius:9px;
   padding:9px 12px;font-size:13px}
 .viewbtns .btn{background:var(--overlay);font-size:13px;padding:5px 10px}
+
+/* Collapsible sections of the settings panes (ui/form.js). */
+.grp-h{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);
+  padding:12px 0;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);cursor:pointer}
+.grp-h::before{content:"▸";display:inline-block;width:10px}
+.grp.open>.grp-h{color:var(--text)}
+.grp.open>.grp-h::before{content:"▾"}
+.grp-h:hover{color:var(--accent)}
+.grp:not(.open)>.grp-body{display:none}

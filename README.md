@@ -75,7 +75,7 @@ src/
     field.js            height-field warp for curved layers (mesh refinement, layer space)
   ui/
     slice-panel.js      Slice button (opens the slice-style chooser) and Export, layer slider, slice summary
-    form.js             renders schema fields, two-way bound to settings
+    form.js             renders schema fields, two-way bound to settings; each section is a dropdown (open state remembered)
     zones.js            Zones editor in the Slice menu: silhouette with draggable zone boundaries, per-zone style and settings
     panels.js           sidebar tabs and the Model / Printer / Print paths panes
     status.js           model summary (status card and Model pane)
