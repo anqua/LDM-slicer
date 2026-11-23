@@ -21,7 +21,14 @@ function fieldHTML(f) {
       + `${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''}>`
       + `${f.unit ? `<span>${f.unit}</span>` : ''}</div>`;
   }
-  return `<div class="row"><label for="${id}">${f.label}</label>${input}${help}</div>`;
+  const dep = f.dep ? ` data-dep="${f.dep[0]}" data-vals="${f.dep[1].join(',')}"` : '';
+  return `<div class="row"${dep}><label for="${id}">${f.label}</label>${input}${help}</div>`;
+}
+
+/** Show a row only while the setting it depends on has one of its values. */
+function applyDeps() {
+  for (const row of document.querySelectorAll('[data-dep]'))
+    row.hidden = !row.dataset.vals.split(',').includes(String(S[row.dataset.dep]));
 }
 
 const isNumeric = f => !f.type || f.type === 'num';
@@ -46,10 +53,12 @@ export function renderFields(container, fields, { before = '', after = '' } = {}
       update({ [f.k]: v });
     });
   }
+  applyDeps();
 }
 
 // Reflect programmatic changes (e.g. "Scale to fit bed") back into the inputs.
 onChange(keys => {
+  applyDeps();
   for (const k of keys) {
     const el = inputs.get(k);
     if (el && document.activeElement !== el) el.value = S[k];

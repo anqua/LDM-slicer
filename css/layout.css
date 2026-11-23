@@ -10,6 +10,10 @@ header{height:var(--header-h);display:flex;align-items:center;gap:10px;padding:0
 .brand{font-weight:650;letter-spacing:.2px;display:flex;align-items:center;gap:8px;margin-right:8px}
 .brand i{width:14px;height:14px;border-radius:50%;background:var(--accent);display:inline-block}
 .spacer{flex:1}
+.btn-group{display:flex;gap:0}
+.btn-group .btn:first-child{border-top-right-radius:0;border-bottom-right-radius:0}
+.btn-group select.btn{border-left:0;border-top-left-radius:0;border-bottom-left-radius:0;padding:6px 6px}
+.row[hidden]{display:none}
 
 /* Lab attribution (@A), right end of the header. Same lockup and type as the @A website footer
    (.footer-group-name: Space Grotesk 500, line-height 1.3, white, left-aligned). */

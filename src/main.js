@@ -1,6 +1,6 @@
 // Entry point: creates the viewer, bed and model, builds the UI and wires them together.
 import { S, save, update, onChange } from './core/settings.js';
-import { BED_KEYS, TRANSFORM_KEYS } from './core/schema.js';
+import { SCHEMA, BED_KEYS, TRANSFORM_KEYS } from './core/schema.js';
 import { createViewer } from './viewer/viewer.js';
 import { createBed, bedCenter } from './viewer/bed.js';
 import { createPrinterModel } from './viewer/printer-model.js';
@@ -16,6 +16,7 @@ import { createToolpathView } from './viewer/toolpath.js';
 import { layerHeights, sliceMesh } from './slicer/slice.js';
 import { buildToolpaths } from './slicer/paths.js';
 import { toGcode } from './slicer/gcode.js';
+import { buildNonStanding } from './slicer/nonstanding.js';
 import { initSidebarResize } from './ui/sidebar-resize.js';
 import { initVersionStamp } from './ui/version-stamp.js';
 
@@ -74,17 +75,27 @@ onFrame(dt => {
   showSim(Math.min(t, toolpath.duration));
 });
 
-function runSlice() {
+function runSlice(nonplanar = false) {
+  nonplanar = nonplanar === true;      // also called from the S key and click events
   const pos = model.positions();
   if (!pos) return;
   if (!model.fits() && !confirm('The model is outside the build volume. Slice anyway?')) return;
-  panel.busy(true);
+  panel.busy(true, nonplanar);
   setTimeout(() => {                   // let the button repaint before the (synchronous) work
     try {
-      const top = model.bounds().max.z;
-      const sliced = sliceMesh(pos, layerHeights(top, S.firstLayerH || S.layerH, S.layerH), Math.max(0.02, S.lineW * 0.03));
-      const tp = buildToolpaths(sliced, S);
-      const gcode = toGcode(tp, S, { modelName: model.name() });
+      let tp, o = S, note = '';
+      if (nonplanar) {
+        const r = buildNonStanding(pos, S, model.bounds().max.z);
+        tp = r.tp;
+        // Travel moves are straight in xy at the higher end point + hop: lift by the full texture height.
+        o = { ...S, zhop: Math.max(S.zhop, r.hop) };
+        note = `${r.note} · Z up to ${r.zMax.toFixed(1)} mm`;
+      } else {
+        const top = model.bounds().max.z;
+        const sliced = sliceMesh(pos, layerHeights(top, S.firstLayerH || S.layerH, S.layerH), Math.max(0.02, S.lineW * 0.03));
+        tp = buildToolpaths(sliced, S);
+      }
+      const gcode = toGcode(tp, o, { modelName: model.name(), note });
       result = { tp, gcode };
       setPlaying(false);
       toolpath.set(tp, S);
@@ -194,6 +205,13 @@ initPanels({
 
 initViewControls(rig, frameView);
 initSidebarResize();
+{                                      // style selector next to the Non-standing slice button, same setting as in Print paths
+  const sel = document.getElementById('nsStyle');
+  sel.innerHTML = SCHEMA.paths.find(f => f.k === 'npMode').opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
+  sel.value = S.npMode;
+  sel.addEventListener('change', () => update({ npMode: sel.value }));
+  onChange(keys => { if (keys.includes('npMode')) sel.value = S.npMode; });
+}
 initVersionStamp();                    // async; does not block anything
 initFileInput(openFile);
 document.getElementById('demo').addEventListener('click', () => openModel(demoVaseGeometry(), 'demo-vase.stl'));

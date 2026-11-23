@@ -31,7 +31,9 @@ export function initSlicePanel(actions) {
   const slider = $('layer'), label = $('layerLabel'), playBtn = $('play'), speed = $('simSpeed'), time = $('simTime');
   let layers = [], total = 0;
 
-  sliceBtn.addEventListener('click', actions.slice);
+  const npBtn = $('sliceNP');
+  sliceBtn.addEventListener('click', () => actions.slice(false));
+  npBtn.addEventListener('click', () => actions.slice(true));
   exportBtn.addEventListener('click', actions.exportGcode);
   const modelSw = bindSwitch($('showModel'), false, actions.setShowModel);
   bindSwitch($('showTravel'), false, actions.setShowTravel);
@@ -61,10 +63,15 @@ export function initSlicePanel(actions) {
   return {
     /** Enable Slice when a model is loaded. */
     setCanSlice(v) {
-      sliceBtn.disabled = !v;
+      sliceBtn.disabled = npBtn.disabled = !v;
       sliceBtn.title = v ? 'Slice the model (S)' : 'Load a model first';
+      npBtn.title = v ? 'Non-standing slice in the chosen style (settings: Print paths → Non-standing slice)' : 'Load a model first';
     },
-    busy(v) { sliceBtn.textContent = v ? 'Slicing…' : 'Slice'; sliceBtn.disabled = v; },
+    busy(v, np = false) {
+      sliceBtn.textContent = v && !np ? 'Slicing…' : 'Slice';
+      npBtn.textContent = v && np ? 'Slicing…' : 'Non-standing slice';
+      sliceBtn.disabled = npBtn.disabled = v;
+    },
     get speed() { return +speed.value; },
 
     /** Show a finished slice. `duration`: simulated print time in s. */
