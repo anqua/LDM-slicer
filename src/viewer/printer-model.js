@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { S } from '../core/settings.js';
 import { cssVar } from '../core/theme.js';
 import { PRINTERS, DEFAULT_PRINTER } from '../core/printers.js';
-import { bedCenter } from './bed.js';
+import { bedCenter, PLATE_Z } from './bed.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const TOWER_ANGLES = [90, 210, 330].map(d => THREE.MathUtils.degToRad(d));   // one tower at the back
@@ -24,6 +24,7 @@ function setRod(m, a, b) {
 }
 
 const NOZZLE_H = 34;          // cone height; the nozzle tip is the cone's point
+const ROD_R = 3.5;            // arm radius
 
 /** Triangle with vertices at radius R in the tower directions, rotated by `rot`. */
 function triangle(R, path = new THREE.Shape(), rot = 0) {
@@ -71,12 +72,17 @@ export function createPrinterModel(scene) {
     const top = frame ? frame.height - below : S.bedZ * 1.9;      // keeps the machine's total height
     const at = (a, r, z) => new THREE.Vector3(cx + r * Math.cos(a), cy + r * Math.sin(a), z);
 
-    // Base slab and bed support.
+    // Base slab and the round build platform on it. No part of the platform lies under or over the bed plate
+    // (bed.js, at PLATE_Z): its side wall runs from the slab's top face up to the plate's level, and only a
+    // rim ring (the part wider than the plate) closes its top, edge to edge with the plate. Nothing overlaps.
     group.add(triSlab(cx, cy, -below, towerR * 1.22, BASE_T, M.dark));
-    const support = new THREE.Mesh(new THREE.CylinderGeometry(bedR * 1.04, bedR * 1.04, PED_H, 64), M.dark);
-    support.rotation.x = Math.PI / 2;
-    support.position.set(cx, cy, -PED_H / 2 - 0.2);
-    group.add(support);
+    const wallH = PLATE_Z + PED_H;                                   // slab top is at z = -PED_H
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(bedR * 1.04, bedR * 1.04, wallH, 64, 1, true), M.dark);
+    wall.rotation.x = Math.PI / 2;
+    wall.position.set(cx, cy, -PED_H + wallH / 2);
+    const rim = new THREE.Mesh(new THREE.RingGeometry(bedR, bedR * 1.04, 64), M.dark);
+    rim.position.set(cx, cy, PLATE_Z);
+    group.add(wall, rim);
 
     // Towers run between the top of the base slab and the underside of the top ring.
     const z0 = -below + BASE_T, z1 = top - TOP_T;
@@ -105,13 +111,13 @@ export function createPrinterModel(scene) {
     const towers = TOWER_ANGLES.map(a => {
       const car = box(pair * 2 + 14, carD, carH, 0, 0, 0, M.dark);
       car.rotation.z = a + Math.PI / 2;
-      const arms = [rod(3.5, M.frame), rod(3.5, M.frame)];
+      const arms = [rod(ROD_R, M.frame), rod(ROD_R, M.frame)];
       group.add(car, ...arms);
       return { a, car, arms, side: new THREE.Vector3(-Math.sin(a), Math.cos(a), 0).multiplyScalar(pair) };
     });
 
     // Delta kinematics: each carriage sits where its fixed-length arms reach the effector.
-    const e = new THREE.Vector3(), k = new THREE.Vector3();
+    const e = new THREE.Vector3(), k = new THREE.Vector3(), axis = new THREE.Vector3();
     const pose = (x, y, tipZ) => {
       const ez = tipZ + effT / 2 + NOZZLE_H;
       head.position.set(x, y, ez);
@@ -125,6 +131,14 @@ export function createPrinterModel(scene) {
           const s = i ? -1 : 1;
           e.set(ex, ey, ez).addScaledVector(t.side, s);
           k.set(kx, ky, carZ).addScaledVector(t.side, s);
+          // A flat rod end meets a slanted face and its rim would dig in by r·sin φ (φ = angle between the rod
+          // and the face normal; both faces are vertical, facing along ±(cos a, sin a)). Back each end off by
+          // r·tan φ so the rim just touches the face: parts touch, none overlap.
+          axis.subVectors(e, k).normalize();                             // carriage -> effector
+          const c = Math.max(0.2, -(axis.x * Math.cos(t.a) + axis.y * Math.sin(t.a)));   // cos φ
+          const back = ROD_R * Math.sqrt(1 - c * c) / c;
+          e.addScaledVector(axis, -back);
+          k.addScaledVector(axis, back);
           setRod(arm, e, k);
         });
       }

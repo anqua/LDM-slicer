@@ -19,6 +19,9 @@ function disposeTree(obj) {
   obj.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); });
 }
 
+/** Height of the bed plate: just under z = 0 so the grid lines (z = 0) and the first layer sit clearly above it. */
+export const PLATE_Z = -0.3;
+
 export function createBed(scene) {
   const group = new THREE.Group();
   scene.add(group);
@@ -27,9 +30,11 @@ export function createBed(scene) {
     for (const c of [...group.children]) { disposeTree(c); group.remove(c); }
 
     const R = S.bedX / 2;
-    const plateMat = new THREE.MeshBasicMaterial({ color: cssVar('bed') });   // unlit: exact token color
+    // Unlit: exact token color. polygonOffset pushes the plate back in depth so the grid lines drawn on it
+    // can never flicker through (no coplanar or near-coplanar surfaces: the platform's rim meets it edge to edge).
+    const plateMat = new THREE.MeshBasicMaterial({ color: cssVar('bed'), polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
     const plate = new THREE.Mesh(new THREE.CircleGeometry(R, 96), plateMat);
-    plate.position.z = -0.05;
+    plate.position.z = PLATE_Z;
     group.add(plate);
 
     // Grid every 10 mm, bolder every 50 mm, clipped to the circle.

@@ -3,7 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export function createCameraRig(domElement) {
-  const persp = new THREE.PerspectiveCamera(40, 1, 1, 20000);
+  // near = 5 mm: a larger near/far ratio costs depth precision, and thin features (bed plate, grid) need it.
+  const persp = new THREE.PerspectiveCamera(40, 1, 5, 20000);
   const ortho = new THREE.OrthographicCamera(-1, 1, 1, -1, -50000, 50000);
   persp.up.set(0, 0, 1);
   ortho.up.set(0, 0, 1);
