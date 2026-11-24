@@ -59,6 +59,8 @@ export const SCHEMA = {
     { h: 'Bottom layers' },
     { k: 'bottomLayers', label: 'Bottom layers', def: 3, step: 1, min: 0, max: 50,
       help: 'Number of layers at the base with their own infill. 0 = no base (open bottom).' },
+    { k: 'topLayers', label: 'Top layers', def: 3, step: 1, min: 0, max: 50, off: ['mode', ['spiral']],
+      help: 'Solid layers that close the top of the model, wherever nothing is printed above (a lid, or the top of each step). They use the pattern, spacing, flow and speed below. 0 = open top. Layer by layer only.' },
     { k: 'bottomPattern', label: 'Infill pattern', type: 'select', def: 'lines',
       opts: [['lines', 'Lines'], ['grid', 'Grid'], ['concentric', 'Concentric']],
       help: 'Lines turn 90° every layer. Grid prints both directions on every layer. Concentric follows the outline; its middle is filled with lines.' },

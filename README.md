@@ -49,6 +49,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md): the folders, how data flows, and where t
 - **Printer:** built for the Delta WASP 2040 Clay only: round bed with the origin at its center. Settings: bed diameter and height, nozzle (1.5–3 mm), extruder type, how E is interpreted (virtual filament or volume), firmware, start and end G-code.
 - **Print paths:** layer height, line width, spiral or layered mode, walls, infill pattern / angle / spacing / zig-zag width, seam, flow, retraction, speeds.
 - **Bottom layers** (independent of the infill above): number of layers, infill pattern (lines turning 90° per layer, grid, or concentric rings following the outline with a line-filled middle), angle, line spacing (a multiple of the nozzle diameter), flow multiplier (default 75 % of the flow of the rest of the model) and print speed. Walls on these layers keep the wall settings; layer 1 uses the first-layer speed.
+- **Top layers** (layer by layer, default 3): the last N layers under any open surface (the lid of the model, or the top of each step) get solid fill lines, using the Bottom layers pattern, spacing, flow and speed. Lines are cut where material continues above, so a step gets skin only on its open part. 0 = open top. Not used by the helix.
 - **Start of print / end of paths** (after Termite by Julian Jauk, TU Graz):
   - *Priming loops* around the part before it starts, and their distance.
   - *First layer height*, separate from the other layers.

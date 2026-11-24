@@ -2,7 +2,7 @@
 // inside them: the solid base on bottom layers (layer-fill.js bottomFill), the infill above (infillFill).
 import { islands, offset, nearestIndex } from './polygon.js';
 import { seamLoop } from './seam.js';
-import { bottomFill, infillFill } from './layer-fill.js';
+import { bottomFill, infillFill, topSkinFill } from './layer-fill.js';
 
 const dist2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2;
 
@@ -42,7 +42,7 @@ function addWalls(bounds, count, o, sink, rng) {
  * @param pos       where the head is when the layer starts, or null
  * @returns { paths, pos }  pos: where the head is at the end
  */
-export function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
+export function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng, covered) {
   const paths = [], sink = createSink(paths, z, h, pos);
   const walls = Math.max(1, Math.round(o.walls));
   // "Infill only": no wall is printed; the infill then reaches the outline (wEff = 0 walls inside it).
@@ -57,7 +57,9 @@ export function layerPaths(loops, z, h, o, solid, layerIdx, pos, rng) {
     if (wallsOn) addWalls(bounds, walls, o, sink, rng);
     // The fill region starts inside the walls, overlapping the innermost wall by 15 % of a line.
     const fill = { bounds, o, wEff, inset: o.lineW * (wEff + 0.5 - 0.15), z, layerIdx, sink, rng };
-    if (solid) bottomFill(fill); else infillFill(fill);
+    if (solid) bottomFill(fill);
+    else if (covered) { infillFill(fill); topSkinFill(fill, covered); }   // covered: top skin where nothing is above
+    else infillFill(fill);
   }
   return { paths, pos: sink.pos };
 }

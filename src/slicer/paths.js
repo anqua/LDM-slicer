@@ -5,7 +5,7 @@
 // Path:   { type: 'skirt'|'outer'|'inner'|'bottom'|'infill'|'spiral', pts: [[x, y, z], ...], h, speed, join? }
 // `join: true` means the path continues straight on from the previous one (spiral vase):
 // no travel, no safe end / safe start in between.
-import { convexHull, grow } from './polygon.js';
+import { convexHull, grow, contains } from './polygon.js';
 import { seamLoop } from './seam.js';
 import { layerPaths } from './layer-paths.js';
 import { buildSpiral } from './spiral.js';
@@ -65,6 +65,10 @@ export function buildToolpaths(sliced, o) {
   const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);    // seeded: a slice is repeatable
   const spiral = o.mode === 'spiral' && o.printParts !== 'infill';          // infill only needs layers: no spiral
   const bottomN = Math.max(0, Math.round(o.bottomLayers));
+  // Top skin: a point is covered when each of the next topN layers has material there (even-odd over the layer's loops).
+  const topN = spiral ? 0 : Math.max(0, Math.round(o.topLayers ?? 0));
+  const solidAt = (loops, x, y) => loops.reduce((n, l) => n + (contains(l, [x, y]) ? 1 : 0), 0) % 2 === 1;
+  const coveredBy = i => (x, y) => { for (let k = 1; k <= topN; k++) { const up = sliced[i + k]; if (!up || !solidAt(up.loops, x, y)) return false; } return true; };
   const layers = [];
   let pos = null, multiIsland = false;
 
@@ -77,7 +81,7 @@ export function buildToolpaths(sliced, o) {
     // Layer-by-layer engine: every layer in layered mode, and the solid base in spiral mode.
     // Everything above the base in spiral mode is a separate engine (spiral.js), run after this loop.
     if (spiral && i >= bottomN) return;
-    const r = layerPaths(sl.loops, sl.z, sl.h, spiral ? { ...o, walls: 1 } : o, i < bottomN, i, pos, rng);
+    const r = layerPaths(sl.loops, sl.z, sl.h, spiral ? { ...o, walls: 1 } : o, i < bottomN, i, pos, rng, topN && i >= bottomN ? coveredBy(i) : null);
     out.paths.push(...r.paths);
     pos = r.pos ?? pos;
   });

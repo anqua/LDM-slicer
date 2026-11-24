@@ -64,6 +64,45 @@ export function bottomFill(c) {
   }
 }
 
+/**
+ * The top skin: solid lines (Bottom layers pattern settings) wherever the model does not continue above this layer.
+ * `covered(x, y)` is true where material continues above; lines are cut there, so a lid or a step gets skin only on its open part.
+ */
+export function topSkinFill(c, covered) {
+  const { bounds, o, inset, layerIdx, sink } = c;
+  const clip = clipOf(bounds, inset);
+  if (!usable(clip)) return;
+  const gap = Math.max(o.lineW * 0.5, (o.bottomSpacingX ?? 1) * o.nozzle), step = Math.max(0.4, o.lineW * 0.4);
+  const a = o.bottomAngle + (o.bottomPattern === 'lines' && layerIdx % 2 ? 90 : 0);
+  const segs = fillLines(clip, a, gap);
+  if (o.bottomPattern === 'grid') segs.push(...fillLines(clip, a + 90, gap));
+  // Most layers are covered everywhere: look at a coarse set of points first (a 3 mm step along every 2nd line) and stop early.
+  const coarse = 3;
+  const anyOpen = segs.some(([p, q], s) => {
+    if (s % 2 && s !== segs.length - 1) return false;
+    const n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / coarse));
+    for (let k = 0; k <= n; k++) if (!covered(p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n)) return true;
+    return false;
+  });
+  if (!anyOpen) return;
+  const out = [];
+  for (const [p, q] of segs) {
+    const n = Math.max(1, Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / step));
+    const at = k => [p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n];
+    let from = null;
+    for (let k = 0; k <= n; k++) {
+      const pt = at(k), open = !covered(pt[0], pt[1]);
+      if (open && from == null) from = pt;
+      if (from && (!open || k === n)) {
+        const e = open ? pt : at(k - 1);
+        if (Math.hypot(e[0] - from[0], e[1] - from[1]) > o.lineW) out.push([from, e]);
+        from = null;
+      }
+    }
+  }
+  sink.add('bottom', orderLines(out, sink.pos, Math.max(o.lineW * 2.5, gap * 1.2)));
+}
+
 /** The infill of a layer above the base, by pattern: zig-zag between the walls, lines, grid, or a minimal surface. */
 export function infillFill(c) {
   const { bounds, o, wEff, inset, z, layerIdx, sink, rng } = c;
