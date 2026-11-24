@@ -66,7 +66,7 @@ export function buildToolpaths(sliced, o) {
   const spiral = o.mode === 'spiral' && o.printParts !== 'infill';          // infill only needs layers: no spiral
   const bottomN = Math.max(0, Math.round(o.bottomLayers));
   // Top skin: a point is covered when each of the next topN layers has material there (even-odd over the layer's loops).
-  const topN = spiral ? 0 : Math.max(0, Math.round(o.topLayers ?? 0));
+  const topN = spiral ? 0 : o.capTop === 'open' ? 0 : Math.max(0, Math.round(o.topLayers ?? 0));
   const solidAt = (loops, x, y) => loops.reduce((n, l) => n + (contains(l, [x, y]) ? 1 : 0), 0) % 2 === 1;
   const coveredBy = i => (x, y) => { for (let k = 1; k <= topN; k++) { const up = sliced[i + k]; if (!up || !solidAt(up.loops, x, y)) return false; } return true; };
   const layers = [];
