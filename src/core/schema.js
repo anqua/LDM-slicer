@@ -127,7 +127,7 @@ export const SCHEMA = {
     { h: 'Non-standard slice' },
     { k: 'npMode', label: 'Style', type: 'select', def: 'curved',
       opts: [...Object.entries(STYLES).map(([id, s]) => [id, s.label]), ['zones', 'Zones']],
-      help: 'Also chosen from the Slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: the wall waves up and down and in and out as it goes round. Loop texture: the wall path curls into small loops between two heights.' },
+      help: 'Also chosen from the Slice button. Curved: the layers themselves follow a wave, ripple or cone. Ruffled wall: a plain wall with extra flow at intervals, which swells the bead into a texture. Loop texture: the wall path curls into small loops between two heights.' },
     ...styleSchemaFields(),                // the settings of each style, from nonstandard/styles.js
   ],
   model: [

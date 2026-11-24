@@ -41,7 +41,7 @@ export function buildHelix({ out, layers, walls, perim, bottomN, nL, o, top, war
       }
       const pt = toWorld(x, y, zl + sh.dz);
       const kap = warp ? warp.kappa(x, y, zl, rise) : sh.kap;
-      pt.push(Math.max(0.2, kap), turn.perHorizontalMm ? 1 : 0);
+      pt.push(Math.max(0.2, kap), turn.perHorizontalMm ? 1 : 0, sh.fl ?? 1);   // [3] layer spacing, [4] per horizontal mm, [5] extra flow factor
       if (pt[2] > zMax) zMax = pt[2];
       pts.push(pt);
     }

@@ -19,7 +19,7 @@ function chains(layers) {
   const out = [];
   layers.forEach((l, li) => {
     for (const p of l.paths) {
-      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h * (q[3] ?? 1), speed: p.speed, fm: p.flow ?? 1, li, xv: q[4] === 1 }));   // q[3]: local layer spacing, relative; q[4]: clay per horizontal mm; li: layer of this point
+      const pts = p.pts.map(q => ({ x: q[0], y: q[1], z: q[2], h: p.h * (q[3] ?? 1), speed: p.speed, fm: (p.flow ?? 1) * (q[5] ?? 1), li, xv: q[4] === 1 }));   // q[3]: local layer spacing, relative; q[4]: clay per horizontal mm; li: layer of this point
       const last = out.at(-1);
       if (p.join && last) last.pts.push(...pts.slice(1));
       else out.push({ type: p.type, layer: li, pts, hop: p.hop ?? 0 });

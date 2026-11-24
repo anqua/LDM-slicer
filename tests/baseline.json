@@ -6,7 +6,7 @@
   "standard spiral": { "hash": "41249f16", "lines": 31716, "warnings": 0 },
   "standard infill only": { "hash": "8a9f0adb", "lines": 40416, "warnings": 0 },
   "non-standard curved": { "hash": "232aee84", "lines": 52502, "warnings": 0 },
-  "non-standard ruffle": { "hash": "05d67a9d", "lines": 28582, "warnings": 1 },
+  "non-standard ruffle": { "hash": "1624a844", "lines": 69495, "warnings": 1 },
   "non-standard loops": { "hash": "70c10bc2", "lines": 153666, "warnings": 0 },
-  "non-standard zones": { "hash": "09339785", "lines": 67065, "warnings": 0 }
+  "non-standard zones": { "hash": "04afd0a1", "lines": 70572, "warnings": 0 }
 }

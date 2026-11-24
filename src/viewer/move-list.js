@@ -21,7 +21,7 @@ export function movesFromToolpaths(tp, o) {
       for (let i = 1; i < p.pts.length; i++) {
         const a = p.pts[i - 1], b = p.pts[i];
         moves.push({ a, b, extrude: true, type: p.type, layer: li, dt: Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) / p.speed,
-          area: beadArea(o.lineW, p.h * (b[3] ?? 1)) * (p.flow ?? 1) });      // clay per mm: the same as the G-code writes
+          area: beadArea(o.lineW, p.h * (b[3] ?? 1)) * (p.flow ?? 1) * (b[5] ?? 1) });      // clay per mm: the same as the G-code writes
       }
       last = p.pts.at(-1);
     }

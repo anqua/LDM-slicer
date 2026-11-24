@@ -111,6 +111,8 @@ export function createToolpathView(scene) {
     setShowTravel(v) { showTravel = v; if (travels) travels.visible = v; },
     /** The printer model is shown: it carries the nozzle, so the marker is hidden. */
     setMachineShown(v) { machineShown = v; if (solid) { applyMode(); simulate(lastT); } },
+    /** Box (THREE.Box3) around the printed path, or null when there is none. */
+    bounds() { return lines ? new THREE.Box3().setFromObject(lines) : null; },
     get mode() { return mode; },
     get active() { return !!lines; },
     get duration() { return tl ? tl.duration : 0; },

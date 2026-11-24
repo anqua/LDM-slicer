@@ -29,7 +29,9 @@ export function fieldHTML(f, prefix = "f_") {
 }
 
 /** Show a row only while the setting it depends on has one of its values; grey out and disable a row while a setting makes it moot. */
-function applyDeps() {
+export function applyDeps() {
+  // The Non-standard slice section only exists while a non-standard slice is the one in use (Slice menu).
+  for (const g of document.querySelectorAll('[data-grp$=":Non-standard slice"]')) g.hidden = S.sliceKind !== 'np';
   for (const row of document.querySelectorAll('[data-dep]'))
     row.hidden = !row.dataset.vals.split(',').includes(String(S[row.dataset.dep]));
   for (const row of document.querySelectorAll("[data-off]")) {

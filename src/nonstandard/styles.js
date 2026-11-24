@@ -10,7 +10,8 @@
 //                { step, perHorizontalMm, shape(s, zb) -> { u, dz, dn, kap } }
 //              step: mm between points; perHorizontalMm: clay counted per mm of horizontal advance (inclined walls);
 //              shape: for the fraction s of the turn (zb = height of the wall there): the fraction u of the turn to
-//              sample the outline at, the extra height dz, the shift dn along the outward normal, and the local layer
+//              sample the outline at, the extra height dz, the shift dn along the outward normal, the extra flow factor fl
+//              (optional, 1 = normal; the ruffle swells the bead with it) and the local layer
 //              spacing kap relative to the layer height.
 //              c = { zn (zone), Z (settings of the zone), o (all settings), L (turn length), rise, top, zonesMode }
 //   hop(Z, o, warp)     extra lift (mm) for travel moves to and from this style's wall
@@ -46,35 +47,39 @@ export const STYLES = {
     describe: Z => `curved layers (${Z.npType}, amplitude ${Z.npAmp} mm, wavelength ${Z.npLen} mm, direction ${Z.npAngle}°)`,
   },
 
+  // Ruffled wall: the plain helix (same path, same layers as the standard spiral), but the clay per mm swells and
+  // eases off along the wall, so the outside gets a texture of bulges. Only the flow changes, not the geometry.
   ruffle: {
     label: 'Ruffled wall',
     params: [
-      { k: 'rfAmp', label: 'Wave height', unit: 'mm', def: 6, step: 0.5, min: 0.5, max: 30,
-        help: 'How far the wall rises and falls (± this value). Every layer repeats the one below, so the layers stay evenly spaced.' },
-      { k: 'rfLen', label: 'Wavelength', unit: 'mm', def: 30, step: 1, min: 4, max: 200,
-        help: 'Length of one wave along the wall. Adjusted slightly per loop so the waves close up at the seam.' },
-      { k: 'rfRadial', label: 'In / out', unit: 'mm', def: 3, step: 0.5, min: -20, max: 20,
-        help: 'How far the wall moves outward at a crest and inward at a trough (negative = reversed). 0 = waves in height only.' },
+      { k: 'rfBoost', label: 'Extra flow', unit: '%', def: 60, step: 5, min: 0, max: 300,
+        help: 'How much more clay is pushed out at the fullest point of each bulge, on top of the normal flow (60 % = 1.6 × the clay). The path does not move: the bead swells wider and taller, which makes the texture.' },
+      { k: 'rfLen', label: 'Wavelength', unit: 'mm', def: 12, step: 1, min: 3, max: 200,
+        help: 'Distance between two bulges along the wall. Adjusted slightly per turn so the bulges close up at the seam.' },
+      { k: 'rfShift', label: 'Shift per layer', unit: '% of a wave', def: 50, step: 5, min: 0, max: 100,
+        help: 'How far the bulges move along the wall on each new turn. 0 = bulges stack in vertical ribs, 50 = every other layer offset like bricks, other values twist the pattern.' },
     ],
     extra: [],
     legacyZone: (o, top, baseTop) => ({ from: Math.max(o.npBase, baseTop), to: Infinity }),
     turn({ zn, Z, L, rise, top, zonesMode }) {
-      const a = Z.rfAmp, b = Z.rfRadial, lam = Math.max(4, Z.rfLen), n = Math.max(1, Math.round(L / lam));
-      // Envelope: in over 3 × the larger of height and in/out (the layer thickness stays within 50-150 %), and out
-      // again at the top of a zone, unless the zone runs to the top of the model or is a single-style slice.
-      const bl = Math.max(1e-6, Math.min(Math.max(3 * a, 3 * Math.abs(b)), zonesMode ? (zn.to - zn.from) / 2 : Infinity));
+      const boost = Math.max(0, Z.rfBoost) / 100, lam = Math.max(3, Z.rfLen), n = Math.max(1, Math.round(L / lam));
+      // The effect fades in over five layers above the start of the zone, and out again at the top of a zone,
+      // unless the zone runs to the top of the model or is a single-style slice.
+      const bl = Math.max(1e-6, Math.min(5 * rise, zonesMode ? (zn.to - zn.from) / 2 : Infinity));
       const w = z => smooth((z - zn.from) / bl) * (zn.to >= top - 0.01 || zn.legacy ? 1 : 1 - smooth((z - (zn.to - bl)) / bl));
       return {
-        step: clamp(lam / 16, 0.5, 2), perHorizontalMm: true,
+        step: clamp(lam / 16, 0.5, 2), perHorizontalMm: false,
         shape(s, zb) {
-          const sn = Math.sin(TAU * n * s), wv = w(zb);
-          return { u: s, dz: a * wv * sn, dn: b * wv * sn, kap: 1 + a * sn * (wv - w(zb - rise)) / rise };
+          const turnIdx = Math.round((zb - s * rise) / rise);          // which turn of the helix this is
+          const ph = n * s + turnIdx * Z.rfShift / 100;
+          const bump = 0.5 * (1 - Math.cos(TAU * ph));                  // 0 .. 1 .. 0 per wave
+          return { u: s, dz: 0, dn: 0, kap: 1, fl: 1 + boost * w(zb) * bump };
         },
       };
     },
-    hop: Z => 2 * (Z.rfAmp + Math.abs(Z.rfRadial)) + 1,
-    climbDeg: Z => Math.atan(Z.rfAmp * TAU / Math.max(4, Z.rfLen)) * 180 / Math.PI,
-    describe: Z => `ruffled wall (amplitude ${Z.rfAmp} mm, wavelength ${Z.rfLen} mm, in/out ${Z.rfRadial} mm)`,
+    hop: () => 1,
+    warnings: Z => Z.rfBoost > 150 ? [`Extra flow of ${Z.rfBoost} % at the fullest point of the bulges is a lot of clay for the line width: the bead may slump or smear.`] : [],
+    describe: Z => `ruffled wall (extra flow ${Z.rfBoost} %, wavelength ${Z.rfLen} mm, shift ${Z.rfShift} % per layer)`,
   },
 
   loops: {

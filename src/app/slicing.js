@@ -1,6 +1,7 @@
 // Slicing in the app: runs the pipeline for the loaded model, keeps the result, shows it, drops it when it goes stale.
 import { S, save } from '../core/settings.js';
 import { sliceModel } from '../pipeline.js';
+import { applyDeps } from '../ui/form.js';
 
 /**
  * @param c { model, toolpath, panel, playback }
@@ -19,7 +20,7 @@ export function createSlicing({ model, toolpath, panel, playback }) {
   /** Slice the loaded model. `nonStandard`: use the non-standard engine (S.npMode); otherwise the standard slicer. */
   function run(nonStandard = false) {
     nonStandard = nonStandard === true;                 // also called from the S key and click events
-    S.sliceKind = nonStandard ? "np" : "standard"; save();   // the Slice menu marks the way last used
+    S.sliceKind = nonStandard ? "np" : "standard"; save(); applyDeps();   // the Slice menu marks the way last used
     const pos = model.positions();
     if (!pos) return;
     if (!model.fits() && !confirm('The model is outside the build volume. Slice anyway?')) return;

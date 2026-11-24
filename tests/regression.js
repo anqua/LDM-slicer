@@ -9,7 +9,7 @@ import { sliceModel } from '../src/pipeline.js';
 const ZONES = [
   { from: 0, to: 50, style: 'curved', p: { npAmp: 3 } },
   { from: 50, to: 100, style: 'standard', p: {} },
-  { from: 100, to: 140, style: 'ruffle', p: { rfAmp: 3, rfLen: 40 } },
+  { from: 100, to: 140, style: 'ruffle', p: { rfBoost: 80, rfLen: 20 } },
   { from: 140, to: 170, style: 'loops', p: {} },
   { from: 170, to: 180, style: 'standard', p: {} },
 ];

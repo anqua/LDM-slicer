@@ -4,8 +4,10 @@ const typing = e => /INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
 /**
  * @param rig    camera rig from viewer/camera-rig.js
  * @param frame  (view) => void, frames the scene for 'iso' | 'top' | 'front'
+ * @param zoomExtents  () => void, centers the camera on the object (button and Z key)
  */
-export function initViewControls(rig, frame) {
+export function initViewControls(rig, frame, zoomExtents) {
+  document.getElementById('zoomExt').addEventListener('click', zoomExtents);
   document.querySelectorAll('[data-cam]').forEach(b => b.addEventListener('click', () => frame(b.dataset.cam)));
 
   const projBtn = document.getElementById('proj');
@@ -17,5 +19,6 @@ export function initViewControls(rig, frame) {
   addEventListener('keydown', e => {
     if (typing(e)) return;
     if (e.key.toLowerCase() === 'o') rig.toggleProjection();
+    if (e.key.toLowerCase() === 'z' && !e.ctrlKey && !e.metaKey) zoomExtents();
   });
 }

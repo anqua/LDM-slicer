@@ -70,11 +70,33 @@ export function createCameraRig(domElement) {
     controls.update();
   }
 
+  /** Zoom extents: center the camera on a box (THREE.Box3) and back off until all of it fits, keeping the viewing direction. */
+  function zoomExtents(box) {
+    if (!box || box.isEmpty()) return false;
+    const c = box.getCenter(new THREE.Vector3()), r = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1) * 1.1;
+    const dir = new THREE.Vector3().subVectors(camera.position, controls.target);
+    if (dir.lengthSq() < 1e-9) dir.set(0.55, -0.8, 0.55);
+    dir.normalize();
+    controls.target.copy(c);
+    if (camera === ortho) {
+      orthoHalfH = Math.max(r, r / aspect);          // the sphere must fit the narrower side
+      ortho.zoom = 1;
+      updateOrthoFrustum();
+      camera.position.copy(c).addScaledVector(dir, r * 4);
+    } else {
+      const half = Math.min(THREE.MathUtils.degToRad(persp.fov / 2), Math.atan(tanHalfFov() * aspect));
+      camera.position.copy(c).addScaledVector(dir, r / Math.sin(half));
+    }
+    controls.update();
+    return true;
+  }
+
   return {
     get camera() { return camera; },
     controls,
     resize,
     frame,
+    zoomExtents,
     projection,
     setProjection,
     toggleProjection: () => setProjection(projection() === 'ortho' ? 'persp' : 'ortho'),

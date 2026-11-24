@@ -146,7 +146,7 @@ function opts(k) {
 const ZONES = [
   { from: 0, to: 50, style: 'curved', p: { npAmp: 3 } },
   { from: 50, to: 100, style: 'standard', p: {} },
-  { from: 100, to: 140, style: 'ruffle', p: { rfAmp: 3, rfLen: 40 } },
+  { from: 100, to: 140, style: 'ruffle', p: { rfBoost: 80, rfLen: 20 } },
   { from: 140, to: 170, style: 'loops', p: {} },
   { from: 170, to: 180, style: 'standard', p: {} },
 ];
@@ -187,8 +187,8 @@ export function buildCases() {
   add('vase', 'curved cone', { npMode: 'curved', npType: 'cone', npAmp: 8 }, true);
   add('vase', 'curved wave 45 deg', { npMode: 'curved', npType: 'wave', npAngle: 45 }, true);
   add('vase', 'curved huge amp 30', { npMode: 'curved', npAmp: 30, npLen: 400 }, true);
-  add('vase', 'ruffle extreme', { npMode: 'ruffle', rfAmp: 30, rfLen: 4, rfRadial: 20 }, true);
-  add('vase', 'ruffle negative radial', { npMode: 'ruffle', rfRadial: -20 }, true);
+  add('vase', 'ruffle extreme', { npMode: 'ruffle', rfBoost: 300, rfLen: 3, rfShift: 37 }, true);
+  add('vase', 'ruffle no extra flow', { npMode: 'ruffle', rfBoost: 0 }, true);
   add('vase', 'ruffle + volumetric + retract/zhop', { npMode: 'ruffle', eMode: 'volumetric', retract: 2, zhop: 2 }, true);
   add('vase', 'loops thin line', { npMode: 'loops', nozzle: 1, layerH: 0.6, lineW: 1.2 }, true);
   return cases;

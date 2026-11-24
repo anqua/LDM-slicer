@@ -18,10 +18,10 @@ const PICTURES = {
     const a = Math.max(0, i - 1) * 0.95, y = 60 - i * 6;
     return line(path(48, t => [14 + 92 * t, y - a * Math.sin(t * Math.PI * 2.5)]));
   }).join(''),
-  // a wall whose layers all repeat the same wave (scalloped)
+  // a plain wall whose bead swells at intervals, the bulges shifted on every layer (more clay, same path)
   ruffle: () => Array.from({ length: 11 }, (_, i) => {
     const y = 62 - i * 4.6;
-    return line(path(60, t => [14 + 92 * t, y - 5 * Math.sin(t * Math.PI * 4)]));
+    return line(path(90, t => [14 + 92 * t, y - 2.6 * (0.5 - 0.5 * Math.cos(t * Math.PI * 8 + i * Math.PI))]));
   }).join(''),
   // a different style in each band of height
   zones: () => Array.from({ length: 9 }, (_, i) => { const y = 60 - i * 6, a = i >= 3 && i <= 5 ? 4 : 0; return line(path(48, t => [14 + 92 * t, y - a * Math.sin(t * Math.PI * 4)])); }).join(''),
@@ -36,7 +36,7 @@ const OPTIONS = [
   { id: 'layered', title: 'Standard: layer by layer', text: 'The model is cut into flat layers (Z cuts), printed one on top of the other. Walls, infill, any shape.' },
   { id: 'helix', title: 'Standard: continuous helix', text: 'One single wall that climbs without stopping (spiral vase). No infill.' },
   { id: 'curved', title: 'Non-planar', text: 'The layers themselves curve: wave, ripple or cone.' },
-  { id: 'ruffle', title: 'Ruffled wall', text: 'The wall waves up and down and in and out.' },
+  { id: 'ruffle', title: 'Ruffled wall', text: "A plain wall, but the clay swells and eases off along it: a texture of bulges from extra flow." },
   { id: 'loops', title: 'Loop texture', text: 'The wall curls into small loops between two heights.' },
   { id: 'zones', title: 'Zones', text: 'Different styles at different heights. Opens the zone editor.' },
 ];

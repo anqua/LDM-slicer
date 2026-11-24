@@ -131,7 +131,12 @@ initPanels({
 });
 
 gcodeView = createGcodeView({ model, toolpath, panel, playback, slicing, framed: () => frameView('iso') });   // after initPanels: it uses the Model pane
-initViewControls(rig, frameView);
+/** Zoom extents: the sliced or opened toolpath if there is one, else the model, else the bed. */
+function zoomExtents() {
+  const box = (toolpath.active && toolpath.bounds()) || model.bounds();
+  if (!rig.zoomExtents(box)) frameView('iso');
+}
+initViewControls(rig, frameView, zoomExtents);
 initSidebarResize();
 const sliceMenu = initSliceMenu(slicing.run);           // the Slice button: a chooser with pictures; picking one slices
 zonesUi = initZones(sliceMenu.zonesBox, {
