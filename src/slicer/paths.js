@@ -42,7 +42,7 @@ function collectWarnings(sliced, o, { spiral, multiIsland }) {
  * Bottom infill also carries its own flow multiplier (applied in gcode.js).
  */
 function assignSpeeds(layers, o) {
-  const bottomFlow = (o.bottomFlow ?? 75) / 100;
+  const bottomFlow = (o.bottomFlow ?? 70) / 100;
   layers.forEach((l, i) => {
     for (const p of l.paths) {
       const s = i === 0 ? o.firstSpeed : p.type === 'bottom' ? (o.bottomSpeed ?? o.speed) : o.speed;

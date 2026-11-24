@@ -91,7 +91,7 @@ export function initSlicePanel(actions) {
       exportBtn.title = 'Download the G-code';
       const over = o.reservoir > 0 && stats.volume / 1000 > o.reservoir;
       info.innerHTML = `<b>Sliced</b> · ${stats.layers} layers · ${hms(stats.time)}<br>`
-        + `Clay ≈ ${(stats.volume / 1000).toFixed(0)} ml`
+        + `Clay ≈ ${(stats.volume / 1000).toFixed(0)} ml · ${(stats.volume / 1000 * o.clayDensity).toFixed(0)} g`
         + (over ? ` · <span class="warn">more than the ${o.reservoir} ml tank</span>` : '')
         + ` · path ${(stats.extrudeLen / 1000).toFixed(1)} m`
         + tp.warnings.map(w => `<br><span class="warn">${w}</span>`).join('');
@@ -105,7 +105,7 @@ export function initSlicePanel(actions) {
      * @param r     result of readGcode(): layers, stats, warnings
      * @param opts  { name, onClose, hasModel: an STL is loaded (its Model switch stays), bySpeed: colors are speeds }
      */
-    showGcode(r, { name, onClose, hasModel, bySpeed, warnings = r.warnings }) {
+    showGcode(r, { name, onClose, hasModel, bySpeed, warnings = r.warnings, density = 1.9 }) {
       layers = r.layers;
       total = r.stats.time;
       slider.max = Math.max(1, layers.length);
@@ -120,7 +120,7 @@ export function initSlicePanel(actions) {
       exportBtn.title = 'A G-code file is open: nothing to export';
       const st = r.stats;
       info.innerHTML = `<b>${name.replace(/</g, '&lt;')}</b> · ${st.layers} layers · ${hms(st.time)}<br>`
-        + `Clay ≈ ${(st.volume / 1000).toFixed(0)} ml · path ${(st.extrudeLen / 1000).toFixed(1)} m`
+        + `Clay ≈ ${(st.volume / 1000).toFixed(0)} ml · ${(st.volume / 1000 * density).toFixed(0)} g · path ${(st.extrudeLen / 1000).toFixed(1)} m`
         + warnings.map(w => `<br><span class="warn">${w}</span>`).join('')
         + `<br><button class="btn" id="closeGcode" style="margin-top:6px">Close G-code</button>`;
       info.hidden = false;

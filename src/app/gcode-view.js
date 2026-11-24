@@ -41,7 +41,7 @@ export function createGcodeView({ model, toolpath, panel, playback, slicing, fra
     playback.setPlaying(false);
     toolpath.setMode(S.viewMode);
     toolpath.setMoves(moves, r.layers.length, { lineW: S.lineW, nozzle: S.nozzle }, r.hasTypes ? 'type' : 'speed');
-    panel.showGcode(r, { name: file.name, hasModel: model.loaded, bySpeed: !r.hasTypes, warnings, onClose: close });
+    panel.showGcode(r, { name: file.name, hasModel: model.loaded, bySpeed: !r.hasTypes, warnings, density: S.clayDensity, onClose: close });
     model.setVisible(false);
     playback.show(t == null ? toolpath.duration : t * toolpath.duration);
     renderBox();

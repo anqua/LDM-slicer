@@ -85,7 +85,7 @@ function buildHeader(o, meta, st) {
     `; Priming loops: ${o.skirtLoops} at ${o.skirtDist} mm · pre-fill ${o.preFill} mm`,
     `; Safe start: ${o.safeStartLen} mm at ${o.safeStartSpeed} mm/s · safe end: ${o.safeEndLen} mm at ${o.safeEndSpeed} mm/s to ${o.safeEndFlow} % flow`,
     `; Estimated print time: ${hms(st.time)} (no acceleration)`,
-    `; Estimated clay: ${(st.volume / 1000).toFixed(1)} ml`,
+    `; Estimated clay: ${(st.volume / 1000).toFixed(1)} ml · ${(st.volume / 1000 * o.clayDensity).toFixed(0)} g at ${o.clayDensity} g/cm3`,
     `; Printing path length: ${(st.extrudeLen / 1000).toFixed(2)} m · travel ${(st.travelLen / 1000).toFixed(2)} m`,
     `; Layers: ${st.layers}`,
     '',
@@ -179,6 +179,8 @@ export function toGcode(tp, o, meta = {}) {
 
   const head = buildHeader(o, meta, st);
 
-  const tail = ['; --- end G-code ---', o.endG, ''];
+  // The print ends with the head at its highest point (Max height Z), clear of the part, before the end G-code.
+  const park = ['; --- park: head to max Z ---', 'G90', `G0 Z${f3(o.bedZ)} F${travelF}`];
+  const tail = [...park, '; --- end G-code ---', o.endG, ''];
   return { text: [...head, ...body, ...tail].join('\n'), stats: st };
 }

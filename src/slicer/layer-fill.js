@@ -31,7 +31,7 @@ const usable = clip => clip.length && clip.some(p => area(p) > 0);
 /** The solid base of a bottom layer: its own pattern, angle and spacing (Bottom layers settings). */
 export function bottomFill(c) {
   const { bounds, o, wEff, inset, layerIdx, sink } = c;
-  const gap = Math.max(o.lineW * 0.5, (o.bottomSpacingX ?? 1) * o.nozzle);   // spacing = factor × nozzle
+  const gap = Math.max(o.lineW * 0.5, (o.bottomSpacingX ?? 2.4) * o.nozzle);   // spacing = factor × nozzle
   const joinDist = Math.max(o.lineW * 2.5, gap * 1.2);
   if (o.bottomPattern === 'concentric') {
     // Rings parallel to the outline (and around holes), from the innermost wall inward. Offsets of concave shapes start
@@ -72,7 +72,7 @@ export function topSkinFill(c, covered) {
   const { bounds, o, inset, layerIdx, sink } = c;
   const clip = clipOf(bounds, inset);
   if (!usable(clip)) return;
-  const gap = Math.max(o.lineW * 0.5, (o.bottomSpacingX ?? 1) * o.nozzle), step = Math.max(0.4, o.lineW * 0.4);
+  const gap = Math.max(o.lineW * 0.5, (o.bottomSpacingX ?? 2.4) * o.nozzle), step = Math.max(0.4, o.lineW * 0.4);
   const a = o.bottomAngle + (o.bottomPattern === 'lines' && layerIdx % 2 ? 90 : 0);
   const segs = fillLines(clip, a, gap);
   if (o.bottomPattern === 'grid') segs.push(...fillLines(clip, a + 90, gap));

@@ -1,12 +1,12 @@
 {
-  "standard layered": { "hash": "a056293a", "lines": 17324, "warnings": 0 },
-  "standard 2 walls gyroid": { "hash": "a2ad5d70", "lines": 107930, "warnings": 0 },
-  "standard zigzag": { "hash": "c1c2809f", "lines": 36941, "warnings": 0 },
-  "standard concentric base": { "hash": "3a5eaa4c", "lines": 28062, "warnings": 0 },
-  "standard spiral": { "hash": "4f086e1d", "lines": 31862, "warnings": 0 },
-  "standard infill only": { "hash": "8ca8cda9", "lines": 40809, "warnings": 0 },
-  "non-standard curved": { "hash": "64256c8f", "lines": 52648, "warnings": 0 },
-  "non-standard ruffle": { "hash": "acce535f", "lines": 28728, "warnings": 1 },
-  "non-standard loops": { "hash": "59a22cb6", "lines": 153812, "warnings": 0 },
-  "non-standard zones": { "hash": "234a203a", "lines": 67211, "warnings": 0 }
+  "standard layered": { "hash": "768dc15b", "lines": 17102, "warnings": 0 },
+  "standard 2 walls gyroid": { "hash": "f9f019c6", "lines": 107747, "warnings": 0 },
+  "standard zigzag": { "hash": "9d9a2bc8", "lines": 36708, "warnings": 0 },
+  "standard concentric base": { "hash": "e85f0d00", "lines": 26877, "warnings": 0 },
+  "standard spiral": { "hash": "41249f16", "lines": 31716, "warnings": 0 },
+  "standard infill only": { "hash": "8a9f0adb", "lines": 40416, "warnings": 0 },
+  "non-standard curved": { "hash": "232aee84", "lines": 52502, "warnings": 0 },
+  "non-standard ruffle": { "hash": "05d67a9d", "lines": 28582, "warnings": 1 },
+  "non-standard loops": { "hash": "70c10bc2", "lines": 153666, "warnings": 0 },
+  "non-standard zones": { "hash": "09339785", "lines": 67065, "warnings": 0 }
 }

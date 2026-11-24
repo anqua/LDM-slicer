@@ -56,7 +56,7 @@ function addBase(out, pos, layers, rings, bottomN, o, flat, warnings) {
 
 /** Speeds of the wall paths (first layer, normal; capped by the machine). The base already has its own. */
 function assignSpeeds(out, o) {
-  const bottomFlow = (o.bottomFlow ?? 75) / 100;
+  const bottomFlow = (o.bottomFlow ?? 70) / 100;
   out.forEach((l, i) => {
     for (const p of l.paths) {
       if (p.speed != null) continue;
