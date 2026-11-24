@@ -9,6 +9,7 @@ import { createPrinterModel } from './viewer/printer-model.js';
 import { createToolpathView } from './viewer/toolpath.js';
 import { createModel } from './model/model.js';
 import { readSTL, isSTL } from './model/loader.js';
+import { createGcodeView, isGcode } from './app/gcode-view.js';
 import { demoVaseGeometry } from './model/demo.js';
 import { createPlayback } from './app/playback.js';
 import { createSlicing } from './app/slicing.js';
@@ -58,7 +59,7 @@ function togglePrinter() {
 printerBtn.addEventListener('click', togglePrinter);
 
 // ---- Controllers and panels -----------------------------------------------
-let playback = null, slicing = null, zonesUi = null;    // created below; the panel's actions reach them late
+let playback = null, slicing = null, zonesUi = null, gcodeView = null;    // created below; the panel's actions reach them late
 
 const panel = initSlicePanel({
   exportGcode: () => slicing.download(),
@@ -76,6 +77,7 @@ onFrame(dt => playback.tick(dt));
 
 // ---- Opening a model ------------------------------------------------------
 function openModel(geometry, name) {
+  gcodeView?.close();
   slicing.invalidate();
   model.load(geometry, name);
   zonesUi?.refresh();
@@ -86,7 +88,8 @@ function openModel(geometry, name) {
 }
 
 async function openFile(file) {
-  if (!isSTL(file)) { alert('Please choose an .stl file.'); return; }
+  if (isGcode(file)) { await gcodeView.open(file); return; }
+  if (!isSTL(file)) { alert('Please choose an .stl or a G-code file.'); return; }
   try { openModel(await readSTL(file), file.name); }
   catch (e) { alert('Could not read this STL: ' + e.message); }
 }
@@ -99,7 +102,7 @@ onChange(keys => {
   if (bedChanged || keys.some(k => TRANSFORM_KEYS.has(k))) model.rebuild();
   renderModelStatus(model.info());
   if (!keys.every(k => k === 'zones')) zonesUi?.refresh();   // the zones themselves are edited in the zone editor
-  slicing.invalidate('Settings changed — slice again.');
+  if (!gcodeView?.active) slicing.invalidate('Settings changed — slice again.');   // an open G-code file stays
 });
 
 initPanels({
@@ -108,7 +111,7 @@ initPanels({
     model.rotate(axis);
     model.rebuild();
     zonesUi?.refresh();
-    slicing.invalidate('Model rotated — slice again.');
+    if (!gcodeView.active) slicing.invalidate('Model rotated — slice again.');
     renderModelStatus(model.info());
     frameView('iso');
   },
@@ -127,6 +130,7 @@ initPanels({
   center() { update({ offX: 0, offY: 0 }); },
 });
 
+gcodeView = createGcodeView({ model, toolpath, panel, playback, slicing, framed: () => frameView('iso') });   // after initPanels: it uses the Model pane
 initViewControls(rig, frameView);
 initSidebarResize();
 const sliceMenu = initSliceMenu(slicing.run);           // the Slice button: a chooser with pictures; picking one slices
@@ -142,7 +146,7 @@ rig.onProjectionChange(kind => { S.projection = kind; save(); });
 addEventListener('keydown', e => {                      // S slices (standard), P shows or hides the printer
   if (e.ctrlKey || e.metaKey || isTyping(e)) return;
   const key = e.key.toLowerCase();
-  if (key === 's' && model.loaded) slicing.run();
+  if (key === 's' && model.loaded && !gcodeView.active) slicing.run();
   else if (key === 'p') togglePrinter();
 });
 

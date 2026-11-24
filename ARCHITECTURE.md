@@ -35,8 +35,8 @@ Data flows one way. The UI changes settings with `update({...})`; `main.js` list
 | `src/model/` | The loaded model: STL reading, placement (scale, rotation, offset), the demo vase. |
 | `src/slicer/` | The standard slicer. `slice.js` cuts the mesh into contours, `layer-paths.js` + `layer-fill.js` make walls, base and infill, `infill.js` holds the fill patterns, `spiral.js` the spiral vase, `paths.js` ties them together, `gcode.js` writes G-code. |
 | `src/nonstandard/` | The non-standard engine, for vase-like parts. `outline.js` measures the part, `zones.js` + `styles.js` decide the style at each height, `helix.js` builds the path, `report.js` the warnings, `field.js` the curved-layer warp, `engine.js` runs the steps. |
-| `src/viewer/` | The 3D scene: renderer and cameras, bed, printer model, and the print preview (`toolpath.js`, with `move-list.js`, `timeline.js`, `solid-view.js`, `bead-mesh.js`, `gcode-moves.js`). |
-| `src/app/` | Controllers: `slicing.js` (run a slice, keep the result), `playback.js` (the print simulation), `model-profile.js`. |
+| `src/viewer/` | The 3D scene: renderer and cameras, bed, printer model, and the print preview (`toolpath.js`, with `move-list.js`, `timeline.js`, `solid-view.js`, `bead-mesh.js`, `gcode-moves.js`, the G-code reader). |
+| `src/app/` | Controllers: `slicing.js` (run a slice, keep the result), `gcode-view.js` (open a G-code file and show it in the same preview), `playback.js` (the print simulation), `model-profile.js`. |
 | `src/ui/` | Panels and menus: the settings forms (`form.js`, `panels.js`), the Slice button and menu, the zone editor, the layer bar. |
 | `css/` | `theme.css` (colors, fonts), `layout.css` (page structure), `components.css` (buttons, rows, sections). |
 | `tests/` | The regression test (below). |
@@ -53,6 +53,8 @@ Data flows one way. The UI changes settings with `update({...})`; `main.js` list
 
 **Change how G-code is written.** `src/slicer/gcode.js`. The preview can replay the file (Exact G-code), so check there that it still reads back.
 
+**Read another G-code dialect.** The reader is `readGcode()` in `src/viewer/gcode-moves.js`: layer comments are matched in the comment block at the top of its loop, move types in `normalizeType()`. Add a pattern there and a sample file to `tests/gcode-reader.js`.
+
 **Add a button or panel.** Markup in `index.html`, behaviour in a module under `src/ui/` with an `init…()` function that `main.js` calls. Keep logic out of `main.js`.
 
 ## Conventions
@@ -65,6 +67,8 @@ Data flows one way. The UI changes settings with `update({...})`; `main.js` list
 - Comments explain why, not what. Units are in the name or the comment (mm, s, degrees).
 
 ## Testing
+
+`tests/gcode.html` checks the G-code reader on files written like Cura, PrusaSlicer and this slicer write them (layers, types, E modes, arcs, inches, a malformed file). `tests/stress.html` slices many shapes and settings and checks the G-code; `tests/printer.html` renders the printer model close up.
 
 Open `tests/index.html` through the local server. It slices the demo vase with ten sets of settings (standard, spiral, infill only, curved, ruffle, loops, zones) through `sliceModel()` and compares a fingerprint of each G-code file with `tests/baseline.json`. All rows should say "same". Run it before and after a refactor: a change means the slicer's output changed.
 

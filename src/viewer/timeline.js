@@ -34,7 +34,7 @@ export function buildTimeline(moves, nLayers, colorOf) {
     const A = m.a, B = m.b;                            // points may carry extra values after x, y, z (layer spacing)
     P[n * 6] = A[0]; P[n * 6 + 1] = A[1]; P[n * 6 + 2] = A[2]; P[n * 6 + 3] = B[0]; P[n * 6 + 4] = B[1]; P[n * 6 + 5] = B[2];
     if (m.extrude) {
-      const c = colorOf(m.type);
+      const c = colorOf(m.type, m);
       lineVertices.push(A[0], A[1], A[2], B[0], B[1], B[2]);
       lineColors.push(...c, ...c);
     } else travelVertices.push(A[0], A[1], A[2], B[0], B[1], B[2]);

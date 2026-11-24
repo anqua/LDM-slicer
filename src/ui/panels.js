@@ -42,7 +42,12 @@ function initTabs() {
  */
 export function initPanels(actions) {
   renderFields($('pane-model'), SCHEMA.model, {
-    before: `<h3>Model</h3><div class="info" id="modelInfo">No model loaded.</div>`,
+    before: `<h3>Model</h3><div class="info" id="modelInfo">No model loaded.</div>
+      <div id="gcodeBox" hidden>
+        <h3>G-code file</h3><div class="info" id="gcodeInfo"></div>
+        <div class="row wide"><label for="gcodeOrigin" title="Where the printer's X0 Y0 is: a delta printer has it in the middle of the bed, most others in a corner">Origin</label><select id="gcodeOrigin"><option value="center">Bed center</option><option value="corner">Bed corner</option></select></div>
+        <h3>File header</h3><pre class="info" id="gcodeHeader" style="max-height:200px;overflow:auto;white-space:pre-wrap;margin:0"></pre>
+      </div>`,
     after: `
       <h3>Rotate 90°</h3>
       <div class="btns">

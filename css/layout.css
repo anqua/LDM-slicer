@@ -31,6 +31,7 @@ header .btn{white-space:nowrap;flex-shrink:0}
 .opt b{font-weight:600;font-size:13px}
 .opt small{color:var(--muted);font-size:11px;line-height:1.3}
 .row[hidden]{display:none}
+.btn[hidden]{display:none !important}
 .zones-grid{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;align-items:start}
 .menu-title .btn{margin-right:8px;padding:3px 8px}
 @media (max-width:620px){.zones-grid{grid-template-columns:1fr}}

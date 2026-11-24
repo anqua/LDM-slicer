@@ -27,11 +27,18 @@ export function createToolpathView(scene) {
   }
 
   /** Build the preview from print-order moves (move-list.js). `nLayers` is the slider's range. */
-  function build(newMoves, nLayers, newCtx) {
+  function build(newMoves, nLayers, newCtx, colorBy = "type") {
     clear();
     moves = newMoves; ctx = newCtx;
     const colors = Object.fromEntries(Object.entries(TYPE_TOKEN).map(([k, t]) => { const c = new THREE.Color(cssVar(t)); return [k, [c.r, c.g, c.b]]; }));
-    tl = buildTimeline(moves, nLayers, type => colors[type] ?? colors.outer);
+    let colorOf = type => colors[type] ?? colors.outer;
+    if (colorBy === "speed") {                                  // files without ;TYPE comments: slow (blue) to fast (orange)
+      let lo = Infinity, hi = 0;
+      for (const m of moves) if (m.extrude) { lo = Math.min(lo, m.v); hi = Math.max(hi, m.v); }
+      const cool = [0.29, 0.64, 1], warm = [1, 0.55, 0.26];
+      colorOf = (_, m) => { const t = hi > lo ? (m.v - lo) / (hi - lo) : 0.5; return cool.map((c, k) => c + (warm[k] - c) * t); };
+    }
+    tl = buildTimeline(moves, nLayers, colorOf);
 
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(tl.lineVertices, 3));
@@ -95,6 +102,8 @@ export function createToolpathView(scene) {
     clear, simulate,
     /** The preview from the slicer's own paths. */
     set(tp, o) { build(movesFromToolpaths(tp, o), tp.layers.length, { lineW: o.lineW, nozzle: o.nozzle }); },
+    /** The preview from moves read from any G-code file (gcode-moves.js). colorBy: 'type' or 'speed'. */
+    setMoves(list, nLayers, ctx, colorBy) { build(list, nLayers, ctx, colorBy); },
     /** The preview from the exported G-code text itself (exact). */
     setFromGcode(text, nLayers, home, o) { build(movesFromGcode(text, home, o), nLayers, { lineW: o.lineW, nozzle: o.nozzle }); },
     /** "lines": the toolpath only. "solid": the beads with their real width and height, and the nozzle. */

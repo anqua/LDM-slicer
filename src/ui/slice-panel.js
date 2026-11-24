@@ -32,6 +32,7 @@ export function initSlicePanel(actions) {
   const exportBtn = $('export'), bar = $('slicebar'), info = $('sliceInfo');
   const slider = $('layer'), label = $('layerLabel'), playBtn = $('play'), speed = $('simSpeed'), time = $('simTime');
   let layers = [], total = 0;
+  const legend = bar.querySelector('.legend'), legendHTML = legend.innerHTML;   // the type colors; a G-code file without types shows speeds instead
 
   const npBtn = $('sliceNP');
   exportBtn.addEventListener('click', actions.exportGcode);
@@ -67,9 +68,9 @@ export function initSlicePanel(actions) {
 
   return {
     /** Enable Slice when a model is loaded. */
-    setCanSlice(v) {
+    setCanSlice(v, why) {
       npBtn.disabled = !v;
-      npBtn.title = v ? 'Choose how to slice: standard, non-planar, ruffled wall, loop texture (S = standard, with the current path mode)' : 'Load a model first';
+      npBtn.title = v ? 'Choose how to slice: standard, non-planar, ruffled wall, loop texture (S = standard, with the current path mode)' : (why || 'Load a model first');
     },
     busy(v, np = false) {
       npBtn.textContent = v ? 'Slicing…' : 'Slice ▾';
@@ -98,6 +99,34 @@ export function initSlicePanel(actions) {
       this.progress(duration, layers.length - 1);
     },
 
+
+    /**
+     * Show a G-code file that was opened (not sliced here): layer bar, summary card with a Close button.
+     * @param r     result of readGcode(): layers, stats, warnings
+     * @param opts  { name, onClose, hasModel: an STL is loaded (its Model switch stays), bySpeed: colors are speeds }
+     */
+    showGcode(r, { name, onClose, hasModel, bySpeed, warnings = r.warnings }) {
+      layers = r.layers;
+      total = r.stats.time;
+      slider.max = Math.max(1, layers.length);
+      modelSw.set(false);
+      $('showModel').hidden = !hasModel;
+      $('showExact').hidden = true;                    // a G-code file is always shown exactly
+      legend.innerHTML = bySpeed
+        ? `<i style="background:linear-gradient(90deg,#4aa3ff,#ff8c42);width:48px"></i>Speed ${r.stats.vMin.toFixed(0)}–${r.stats.vMax.toFixed(0)} mm/s (slow to fast)`
+        : legendHTML;
+      bar.hidden = false;
+      exportBtn.disabled = true;
+      exportBtn.title = 'A G-code file is open: nothing to export';
+      const st = r.stats;
+      info.innerHTML = `<b>${name.replace(/</g, '&lt;')}</b> · ${st.layers} layers · ${hms(st.time)}<br>`
+        + `Clay ≈ ${(st.volume / 1000).toFixed(0)} ml · path ${(st.extrudeLen / 1000).toFixed(1)} m`
+        + warnings.map(w => `<br><span class="warn">${w}</span>`).join('')
+        + `<br><button class="btn" id="closeGcode" style="margin-top:6px">Close G-code</button>`;
+      info.hidden = false;
+      $('closeGcode').addEventListener('click', onClose);
+      this.progress(st.time, Math.max(0, layers.length - 1));
+    },
     /** Reflect the simulation state: time t (s) and the 0-based layer being printed. */
     progress(t, layer) {
       slider.value = layer + 1;
@@ -115,6 +144,7 @@ export function initSlicePanel(actions) {
     reset(message) {
       layers = [];
       bar.hidden = true;
+      $('showModel').hidden = false; $('showExact').hidden = false; legend.innerHTML = legendHTML;   // back from a G-code file
       exportBtn.disabled = true;
       exportBtn.title = 'Slice first';
       this.setPlaying(false);

@@ -21,7 +21,7 @@
 <body>
 <header>
   <div class="brand"><i></i><span>LDM Slicer</span></div>
-  <label class="btn">Open STL<input id="file" type="file" accept=".stl" hidden></label>
+  <label class="btn" title="Open an STL model, or a G-code file to look at it">Open file<input id="file" type="file" accept=".stl,.gcode,.gco,.gc,.g,.nc,.ngc,.tap" hidden></label>
   <button class="btn" id="demo">Demo vase</button>
   <div class="spacer"></div>
   <div class="menu-wrap">
@@ -54,7 +54,7 @@
 
   <main>
     <div id="view"></div>
-    <div id="empty">Drop an STL file here<br>or use “Open STL” / “Demo vase”</div>
+    <div id="empty">Drop an STL or G-code file here<br>or use “Open file” / “Demo vase”</div>
     <div class="overlay">
       <div class="card" id="status">No model loaded</div>
       <div class="card" id="sliceInfo" hidden></div>
@@ -90,7 +90,7 @@
       <button class="btn" data-cam="top">Top</button>
       <button class="btn" data-cam="front">Front</button>
     </div>
-    <div id="drop">Drop STL to load</div>
+    <div id="drop">Drop an STL or G-code file to open</div>
   </main>
 </div>
 <!-- Filled in by src/ui/version-stamp.js: time of the latest commit on GitHub. Bottom right corner of the screen. -->
